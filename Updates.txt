@@ -1,6 +1,0 @@
-15-10-2017	
-
-1- Add new attr accessories 
-2- Add new report for cure&accessories
-3- Update entry_date&exit_date in sub_admin
-4- Add prefix to ticket_number attr

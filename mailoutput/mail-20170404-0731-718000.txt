@@ -1,0 +1,13 @@
+To: your@email.com
+Subject: http://localhost backups : error
+Message-ID: <f0a5b383ce623606ac4bef9aa1efa116@swift.generated>
+Date: Tue, 04 Apr 2017 09:31:02 +0200
+From: your@email.com
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Failed to backup  because: The dump process failed with exitcode 1 : Genera=
+l error : 'mysqldump' is not recognized as an internal or external command,
+operable program or batch file.
+

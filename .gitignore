@@ -4,3 +4,9 @@
 Homestead.yaml
 Homestead.json
 .env
+.env.example
+Changes.txt
+database.sql
+Updates.txt
+mailoutput
+/app/HL7

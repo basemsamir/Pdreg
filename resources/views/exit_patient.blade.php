@@ -147,7 +147,7 @@
 				  <!-- /.box-body -->
 
 				  <div class="box-footer">
-					       <button type="button" class="btn btn-primary" >تسجيل</button>
+					   <button type="submit" class="btn btn-primary" >تسجيل</button>
 				  </div>
 				{!! Form::close() !!}
 			  </div>

@@ -36,13 +36,6 @@
 							<div class="alert alert-success">
 						@endif
 								<b>{{ Session::get('flash_message') }} </b>
-								<!--
-								<br>
-								<?php $e=Session::get('vid'); ?>
-								@if($e!="")
-									لطباعة تذكرة المريض <a href='{{ url("patients/ticket/$e") }}' target="_blank"> اضغط هنا </a>
-								@endif
-								-->
 							</div>
 					@endif
 					<div class="alert alert-danger" style="display: none" id="err_msg"></div>
@@ -61,21 +54,30 @@
 							  @endif
 							  @if ($errors->has('id'))<span class="help-block">{{$errors->first('id')}}</span>@endif
 							</div>
-							@if($errors->has('sid'))
-								<div class="form-group has-error">
-							@else
-								<div class="form-group">
-							@endif
-							  {!! Form::label('رقم البطاقة',null) !!}
-							  @if(isset($patient_data))
-								{!! Form::text('sid',$patient_data['sid'],array('size'=>'14','class'=>'form-control','id'=>'sid','placeholder'=>'رقم البطاقة','onkeypress'=>'return isNumber(event)&&isForteen("sid")','disabled')) !!}
-                {!! Form::hidden('hidden_sid',$patient_data['sid']) !!}
-                @else
-								{!! Form::text('sid',null,array('size'=>'14','class'=>'form-control','id'=>'sid','placeholder'=>'رقم البطاقة','onkeypress'=>'return isNumber(event)&&isForteen("sid")')) !!}
-                {!! Form::hidden('hidden_sid',null,array('id'=>'hidden_sid')) !!}
-                @endif
-							  @if ($errors->has('sid'))<span class="help-block">{{$errors->first('sid')}}</span>@endif
-							</div>@if ($errors->has('ticket_num'))
+							<div class="form-group @if($errors->has('serial_number')) has-error @endif">
+								{!! Form::label('رقم التسلسل',null,array('style'=>'color:red')) !!}
+								{!! Form::text('serial_number',null,array('class'=>'form-control','placeholder'=>'رقم التسلسل','onkeypress'=>'return isNumber(event)')) !!}
+								@if ($errors->has('serial_number'))<span class="help-block">{{$errors->first('serial_number')}}</span>@endif
+							
+							</div>
+							<div class="form-group @if($errors->has('reg_date')) has-error @endif">
+								{!! Form::label('تاريخ التسجيل',null,array('style'=>'color:red')) !!}
+								{!! Form::text('reg_date',null,array('class'=>'form-control','id'=>'datepicker','placeholder'=>'1900-01-01')) !!}
+								@if ($errors->has('reg_date'))<span class="help-block">{{$errors->first('reg_date')}}</span>@endif
+							</div>
+							<div class="bootstrap-timepicker">
+							  <div class="form-group @if($errors->has('reg_time')) has-error @endif">
+								  {!! Form::label('reg_time','ساعة التسجيل',array('style'=>'color:red')) !!}
+								  {!! Form::text('reg_time',null,array('class'=>'form-control timepicker')) !!}
+									@if ($errors->has('reg_time'))<span class="help-block">{{$errors->first('reg_time')}}</span>@endif
+							
+							  </div>
+						  </div>
+							<div class="form-group">
+							  {!! Form::label('حالة التذكرة',null,array('style'=>'color:red')) !!}
+								{!! Form::select('ticket_status',['T'=>'عادي','F' => 'مجاني'], 'T',['class'=>'form-control','id'=>'ticket_status_select']); !!}
+							</div>
+							@if ($errors->has('ticket_num'))
 								<div class="form-group has-error">
 							@else
 								<div class="form-group">
@@ -84,11 +86,42 @@
 								{!! Form::text('ticket_num',null,array('class'=>'form-control','id'=>'ticket_num','placeholder'=>'رقم التذكرة','onkeypress'=>'return isNumber(event)')) !!}
 							  @if ($errors->has('ticket_num'))<span class="help-block">{{$errors->first('ticket_num')}}</span>@endif
 							</div>
-							
+							<div class="form-group">
+								{!! Form::label('المشاهدة',null) !!}
+								{!! Form::text('watching_status',null,array('class'=>'form-control','placeholder'=>'المشاهدة')) !!}
+							</div>
 							<div class="form-group @if($errors->has('ticket_type'))  has-error @endif">
 							    {!! Form::label('نوع التذكرة',null,array('style'=>'color:red')) !!}
 								{!! Form::select('ticket_type',['G' => 'استقبال عام', 'T' => 'استقبال اصابات'], 'G',['class'=>'form-control','id'=>'ticket_type_select']) !!}
 							    @if ($errors->has('ticket_type'))<span class="help-block">{{$errors->first('ticket_type')}}</span>@endif
+							</div>
+							@if ($errors->has('medical_id'))
+                <div class="form-group has-error">
+              @else
+  							<div class="form-group"  >
+              @endif
+							   {!! Form::label('أسم القسم',null,array('style'=>'color:red')) !!}
+							   {!! Form::select('medical_id',$medical_units,null,['id'=>'medical_id','class' => 'form-control']); !!}
+              @if ($errors->has('medical_id'))<span class="help-block">{{$errors->first('medical_id')}}</span>@endif
+
+							</div>
+							
+						</div>
+						<div class="col-lg-4" style="float:right">
+							@if($errors->has('sid'))
+								<div class="form-group has-error">
+							@else
+								<div class="form-group">
+							@endif
+							  {!! Form::label('رقم البطاقة',null) !!}
+							  @if(isset($patient_data['sid']) && $patient_data['sid'] !="" )
+								{!! Form::text('sid',$patient_data['sid'],array('size'=>'14','class'=>'form-control','id'=>'sid','placeholder'=>'رقم البطاقة','onkeypress'=>'return isNumber(event)&&isForteen(this)','disabled')) !!}
+                {!! Form::hidden('hidden_sid',$patient_data['sid']) !!}
+                @else
+								{!! Form::text('sid',null,array('size'=>'14','class'=>'form-control','id'=>'sid','placeholder'=>'رقم البطاقة','onkeypress'=>'return isNumber(event)&&isForteen(this)')) !!}
+                {!! Form::hidden('hidden_sid',null,array('id'=>'hidden_sid')) !!}
+                @endif
+							  @if ($errors->has('sid'))<span class="help-block">{{$errors->first('sid')}}</span>@endif
 							</div>
 							@if ($errors->has('fname') || $errors->has('sname') || $errors->has('mname') || $errors->has('lname'))
 								<div class="form-group has-error">
@@ -135,8 +168,6 @@
 							  @endif
 							  @if ($errors->has('gender'))<span class="help-block">{{$errors->first('gender')}}</span>@endif
 							</div>
-						</div>
-						<div class="col-lg-4" style="float:right">
 							@if($errors->has('year_age'))
 								<div class="form-group has-error">
 							@else
@@ -160,18 +191,45 @@
 							  @endif
 							  @if($errors->has('year_age'))<span class="help-block">{{$errors->first('year_age')}}</span>@endif
 							</div>
+							<div class="form-group @if ($errors->has('job')) has-error @endif">
+							  {!! Form::label('المهنة',null,array('style'=>'color:red')) !!}
+								@if(isset($patient_data) && $patient_data['job'] != "")
+							 	 {!! Form::text('job',$patient_data['job'],array('id'=>'job','disabled','class'=>'form-control','placeholder'=>'المهنة')) !!}
+								@else
+									{!! Form::text('job',null,array('id'=>'job','class'=>'form-control','placeholder'=>'المهنة')) !!}
+								@endif
+								@if ($errors->has('job'))<span class="help-block">{{$errors->first('job')}}</span>@endif
+							
+							</div>
 							@if ($errors->has('address'))
 								<div class="form-group has-error">
 							@else
 								<div class="form-group">
 							@endif
 							  {!! Form::label('العنوان',null,array('style'=>'color:red')) !!}
-							  @if(isset($patient_data))
+							  @if(isset($patient_data) && $patient_data['address'] != "")
 								{!! Form::text('address',$patient_data['address'],array('disabled','class'=>'form-control','id'=>'address')) !!}
 							  @else
 							  {!! Form::text('address',null,array('id'=>'address','class'=>'form-control','placeholder'=>'العنوان')) !!}
 							  @endif
 							  @if ($errors->has('address'))<span class="help-block">{{$errors->first('address')}}</span>@endif
+							</div>
+							<div class="form-group @if ($errors->has('sent_by_person')) has-error @endif">
+							  {!! Form::label('مرسل بمعرفة',null,array('style'=>'color:red')) !!}
+							  {!! Form::textarea('sent_by_person',null,array('class'=>'form-control','rows'=>5,'cols'=>4)) !!}
+								@if ($errors->has('sent_by_person'))<span class="help-block">{{$errors->first('sent_by_person')}}</span>@endif
+							
+							</div>
+							<div class="form-group @if ($errors->has('ticket_companion_name')) has-error @endif">
+							  {!! Form::label('أسم مرافق الحجز',null) !!}
+							  {!! Form::text('ticket_companion_name',null,array('class'=>'form-control','placeholder'=>'أسم مرافق الحجز')) !!}
+								@if ($errors->has('ticket_companion_name'))<span class="help-block">{{$errors->first('ticket_companion_name')}}</span>@endif
+							
+							</div>
+							<div class="form-group  @if ($errors->has('ticket_companion_sin')) has-error @endif">
+							  {!! Form::label('رقم البطاقة مرافق الحجز',null) !!}
+							  {!! Form::text('ticket_companion_sin',null,array('class'=>'form-control','placeholder'=>'رقم البطاقة مرافق الحجز','onkeypress'=>'return isNumber(event)&&isForteen(this)')) !!}
+								@if ($errors->has('ticket_companion_sin'))<span class="help-block">{{$errors->first('ticket_companion_sin')}}</span>@endif
 							</div>
               @if ($errors->has('entry'))
                 <div class="form-group has-error">
@@ -183,16 +241,7 @@
               @if ($errors->has('entry'))<span class="help-block">{{$errors->first('entry')}}</span>@endif
 
                 </div>
-              @if ($errors->has('medical_id'))
-                <div class="form-group has-error">
-              @else
-  							<div class="form-group"  >
-              @endif
-							   {!! Form::label('أسم العيادة',null,array('style'=>'color:red')) !!}
-							   {!! Form::select('medical_id',$medical_units,null,['class' => 'form-control']); !!}
-              @if ($errors->has('medical_id'))<span class="help-block">{{$errors->first('medical_id')}}</span>@endif
-
-							</div>
+              
               @if ($errors->has('reservation_type'))
                 <div class="form-group has-error">
               @else
@@ -206,29 +255,51 @@
 						</div>
 
             <div class="col-lg-4" style="float:right;display:none" id="companionDiv">
+						  <fieldset>
+                <legend>بيانات الملف</legend>
+  								<div class="form-group">
+										{!! Form::label('room_number','رقم الغرفة') !!}
+										{!! Form::text('room_number',null,array('class'=>'form-control','placeholder'=>'رقم الغرفة')) !!}
+									</div>
+									<div class="form-group @if($errors->has('file_number')) has-error @endif">
+										{!! Form::label('file_number','رقم الملف',array('style'=>'color:red')) !!}
+										{!! Form::text('file_number',null,array('class'=>'form-control','placeholder'=>'رقم الملف')) !!}
+										@if ($errors->has('file_number'))<span class="help-block">{{$errors->first('file_number')}}</span>@endif
+									</div>
+							  	<div class="form-group @if($errors->has('file_type')) has-error @endif">
+										{!! Form::label('file_type','نوع الملف',array('style'=>'color:red')) !!}
+										{!! Form::select('file_type',$file_types,'',['class' => 'form-control']); !!}
+              			@if ($errors->has('file_type'))<span class="help-block">{{$errors->first('file_type')}}</span>@endif
+									</div>
+									<div class="form-group">
+						      	{!! Form::label('نوع العلاج') !!}
+						      	{!! Form::select('cure_type_id',$cure_types,null,['class' => 'form-control']); !!}
+						  		</div>
+									<div class="form-group">
+										{!! Form::label('contract','جهة التعاقد') !!}
+										{!! Form::text('contract',null,array('class'=>'form-control','placeholder'=>'جهة التعاقد')) !!}
+									</div>
+									<div class="form-group">
+										{!! Form::label('محول بواسطة',null) !!}
+										{!! Form::text('converted_by_doctor',null,array('class'=>'form-control','placeholder'=>'محول بواسطة')) !!}
+									</div>
+									<div class="form-group" >
+										{!! Form::label('الطبيب المعالج') !!}
+										{!! Form::select('reference_doctor_id',$first_clinic_doctors,null,['id'=>'reference_doctor_id','class' => 'form-control']); !!}
+								   </div>
+              </fieldset>
               <fieldset>
                 <legend>بيانات المرافق</legend>
-                @if ($errors->has('c_name'))
-  								<div class="form-group has-error">
-  							@else
-  								<div class="form-group">
-  							@endif
-  							  {!! Form::label('أسم المرافق',null,array('style'=>'color:red')) !!}
-  							  {!! Form::text('c_name',null,array('class'=>'form-control','placeholder'=>'الاسم')) !!}
-
-  							  @if ($errors->has('c_name'))<span class="help-block">{{$errors->first('c_name')}}</span>@endif
-  							  </div>
-							  <div class="bootstrap-timepicker">
-						  @if ($errors->has('entry_time'))
-											<div class="form-group has-error">
-										@else
-											<div class="form-group">
-										@endif
-										  {!! Form::label('وقت الدخول',null,array('style'=>'color:red')) !!}
-										  {!! Form::text('entry_time',null,array('class'=>'form-control timepicker')) !!}
-										  @if ($errors->has('entry_time'))<span class="help-block">{{$errors->first('entry_time')}}</span>@endif
-										  </div>
-						  </div> <!-- bootstrap-timepicker -->
+                	<div class="form-group @if($errors->has('c_name')) has-error @endif">
+										{!! Form::label('أسم المرافق',null) !!}
+										{!! Form::text('c_name',null,array('class'=>'form-control','placeholder'=>'أسم المرافق')) !!}
+										@if ($errors->has('c_name'))<span class="help-block">{{$errors->first('c_name')}}</span>@endif
+									</div>
+									<div class="form-group @if($errors->has('c_sid')) has-error @endif">
+										{!! Form::label('رقم بطاقة المرافق',null) !!}
+										{!! Form::text('c_sid',null,array('class'=>'form-control','placeholder'=>'رقم بطاقة المرافق','onkeypress'=>'return isNumber(event)&&isForteen(this)')) !!}
+										@if ($errors->has('c_sid'))<span class="help-block">{{$errors->first('c_sid')}}</span>@endif
+									</div>
                 @if ($errors->has('relation_id'))
   								<div class="form-group has-error">
   							@else
@@ -238,12 +309,6 @@
   							  {!! Form::select('relation_id',$relations,null,['class' => 'form-control']); !!}
   							  @if ($errors->has('relation_id'))<span class="help-block">{{$errors->first('relation_id')}}</span>@endif
   							  </div>
-							  		
-  					<div class="form-group @if ($errors->has('c_sid')) has-error @endif">
-					  {!! Form::label('رقم القومي',null) !!}
-					  {!! Form::text('c_sid',null,array('class'=>'form-control','id'=>'c_sid','placeholder'=>'الرقم القومي','onkeypress'=>'return isNumber(event)&&isForteen("c_sid")')) !!}
-					  @if ($errors->has('c_sid'))<span class="help-block">{{$errors->first('c_sid')}}</span>@endif
-					</div>
                 @if ($errors->has('c_address'))
   								<div class="form-group has-error">
   							@else
@@ -253,28 +318,15 @@
   							  {!! Form::text('c_address',null,array('id'=>'address','class'=>'form-control','placeholder'=>'العنوان')) !!}
   							  @if ($errors->has('c_address'))<span class="help-block">{{$errors->first('c_address')}}</span>@endif
   							</div>
-                @if ($errors->has('job'))
+                @if ($errors->has('c_job'))
                   <div class="form-group has-error">
                 @else
                   <div class="form-group">
                 @endif
                   {!! Form::label('المهنة') !!}
-                  {!! Form::text('job',null,array('id'=>'address','class'=>'form-control','placeholder'=>'العنوان')) !!}
-                  @if ($errors->has('job'))<span class="help-block">{{$errors->first('job')}}</span>@endif
+                  {!! Form::text('c_job',null,array('id'=>'address','class'=>'form-control','placeholder'=>'العنوان')) !!}
+                  @if ($errors->has('c_job'))<span class="help-block">{{$errors->first('c_job')}}</span>@endif
                 </div>
-  					
-                  
-				  <!--
-                  @if ($errors->has('entry_reason_desc'))
-    								<div class="form-group has-error">
-    							@else
-    								<div class="form-group">
-    							@endif
-    							  {!! Form::label('سبب الدخول',null,array('style'=>'color:red')) !!}
-    							  {!! Form::textarea('entry_reason_desc',null,array('class'=>'form-control','id'=>'entry_reason_desc','rows'=>'2')) !!}
-    							  @if ($errors->has('entry_reason_desc'))<span class="help-block">{{$errors->first('entry_reason_desc')}}</span>@endif
-    							  </div>
-					-->
               </fieldset>
             </div>
 					</div>
@@ -307,15 +359,62 @@ $(document).ajaxComplete(function(){
     $("#overlay").hide();
 });
 $(document).ready(function(){
+	 
+	 if($('#sid').val() != ""){
+		 calculateBOD($('#sid').val(),$('#year_age'));
+	 }
 
    $('#ticket_num').focus();
-  if($("#reservation_type").val() == "T&E")
-    $("#companionDiv").show();
-  else {
-    $("#companionDiv").hide();
+   if($("#reservation_type").val() == "T&E")
+     $("#companionDiv").show();
+   else {
+     $("#companionDiv").hide();
+	 
+	  $("#reference_doctor_id").prepend('<option></option>');
+		$("#reference_doctor_id").prop('selectedIndex',0);
   }
+	/* Change ticket status */
+	$('#ticket_status_select').on('change',function(){
+			$('#ticket_num').val('');
+			if($(this).val() == 'F')
+				$('#ticket_num').attr('readonly','readonly');
+			else
+				$('#ticket_num').removeAttr('readonly');
+	});
+	/* Change department to get its attached doctors in reference_doctor_id select box */
+	$("#medical_id").change(function(){
+		if($("#reservation_type").val() == "T&E"){
+				var url = "{{ url('/patients/getDepartmentDoctors/') }}";
+				$.ajax({
+					type: "POST",
+					url: url,
+					data: { 'mid':$("#medical_id").val() },
+					success: function (data) {
+						$("#reference_doctor_id").empty();
+						if(data['success']=='true'){
+							$("#reference_doctor_id").append("<option></option>");
+							for (i=0;i<data['data'].length;i++) {
+								$("#reference_doctor_id").append("<option value='"+data['data'][i].id+"'>"+data['data'][i].name+"</option>");
+							}
+						}
+					},
+					error: function (data) {
+						alert("Error");
+					}
+				});
+		}
+	});
   $('#sid').on('change paste',function(){
 		$("#err_msg").hide();
+
+			if($("#sid").val().length < 14){
+				$("#year_age").removeAttr('disabled');
+				$("#year_age").val("");
+				$("#month_age").removeAttr('disabled');
+				$("#month_age").prop('selectedIndex',0);
+				$("#day_age").removeAttr('disabled');
+				$("#day_age").prop('selectedIndex',0);
+			}
   		if($('#sid').val().length == 14){
         $("#hidden_sid").val($('#sid').val());
   			var url = "{{ url('/patients/showSID/') }}";
@@ -325,7 +424,7 @@ $(document).ready(function(){
   				data: { 'sid':$("#sid").val() , 'checkflag': 'false' },
   				success: function (data) {
   					if(data['success']=='true'){
-
+							
   						p_name=data['data'][0].name.split(" ");
   						$("#fname").val(p_name[0]).attr("disabled", true);$("#sname").val(p_name[1]).attr("disabled", true);$("#mname").val(p_name[2]).attr("disabled", true);$("#lname").val(p_name[3]).attr("disabled", true);
   						var birthdate = new Date(data['data'][0].birthdate);
@@ -343,20 +442,24 @@ $(document).ready(function(){
 						  }
   						$("#year_age").val(diffYears).attr("disabled", true);
   						$("#month_age option[value='"+diffMonths+"']").prop('selected',true);
-						$("#day_age option[value='"+diffDays+"']").prop('selected',true);
+							$("#day_age option[value='"+diffDays+"']").prop('selected',true);
   						if(data['data'][0].gender == "F")
   							$("#gender_select option[value='F']").prop('selected',true);
   						else
   							$("#gender_select option[value='M']").prop('selected',true);
   						$("#pid").val(data['data'][0].id).attr("disabled", true);
   						$("#sid").attr("disabled", true);
-  						$("#address").val(data['data'][0].address).attr("disabled", true);
+  						if(data['data'][0].sid != null)
+								$("#address").val(data['data'][0].address).attr('disabled',true);
+							if(data['data'][0].sid != null)
+								$("#job").val(data['data'][0].job).attr('disabled',true);
   						$("#gender_select").attr("disabled", true);
   						$("#month_age").attr("disabled", true);
-						$("#day_age").attr("disabled", true);
+							$("#day_age").attr("disabled", true);
   					}
   					else{
-  						$("#pid").val("");
+							if(!$("#pid").prop('disabled'))
+  							$("#pid").val("");
   						calculateBOD($("#sid").val());
   					}
   				},
@@ -368,6 +471,7 @@ $(document).ready(function(){
   		}
   	});
 	$('#pid').change(function(){
+		$("#err_msg").hide();
 		var url = "{{ url('/patients/showPID/') }}";
 		$.ajax({
 			type: "POST",
@@ -397,9 +501,13 @@ $(document).ready(function(){
 							$("#gender_select option[value='F']").prop('selected',true);
 						else
 							$("#gender_select option[value='M']").prop('selected',true);
-						$("#sid").val(data['data'][0].sid).attr('disabled',true);
 						$("#pid").attr('disabled',true);
-						$("#address").val(data['data'][0].address).attr('disabled',true);
+						if(data['data'][0].sid != null)
+							$("#sid").val(data['data'][0].sid).attr('disabled',true);
+						if(data['data'][0].address != null)
+							$("#address").val(data['data'][0].address).attr('disabled',true);
+						if(data['data'][0].job != null)
+							$("#job").val(data['data'][0].job).attr('disabled',true);
 						$("#gender_select").attr("disabled", true);
 						$("#month_age").attr("disabled", true);
 						$("#day_age").attr("disabled", true);
@@ -427,13 +535,19 @@ function isNumber(evt) {
     return true;
 }
 // Function limits the size of SIN field
-function isForteen(sid){
-	if($("#"+sid).val().length >= 14)
+function isForteen(el){
+	if($(el).val().length >= 14)
 		return false;
 	return true;
 }
 // Function calculates the age field
 function calculateBOD(sid){
+	
+	if($("#year_age").next().length > 0){
+		$("#year_age").parent().removeClass('has-error');
+		$("#year_age").next().remove();
+	}
+		
 	var sid_string=sid;
 	var prifx_year="";
 	if(sid_string[0] == 2)
@@ -471,8 +585,11 @@ function calculateBOD(sid){
 	}
 	else{
 		$("#year_age").val(diffYears);
+		$("#year_age").attr('disabled','disabled');
 		$("#month_age").val(diffMonths);
+		$("#month_age").attr('disabled','disabled');
     $("#day_age").val(diffDays);
+		$("#day_age").attr('disabled','disabled');
 	}
 }
 function removeDisabled(){

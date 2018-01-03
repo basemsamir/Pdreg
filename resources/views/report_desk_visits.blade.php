@@ -98,13 +98,14 @@
 							<table id="example1" class="table table-bordered table-hover">
 								<thead>
 								<tr>
+									<th>رقم التسلسل</th>
 									<th>رقم التذكرة</th>
-								  <th>كود المريض</th>
+									<th>نوع التذكرة</th>
+								  <th>تاريخ و وقت الكشف</th>
 									<th>أسم المريض</th>
 									<th>النوع</th>
-									<th>الرقم القومي</th>
+									<th>العمر</th>
 									<th>أسم العيادة</th>
-									<th>تاريخ الحجز</th>
 									<th>أسم مدخل البيان</th>
 								</tr>
 								</thead>
@@ -113,13 +114,42 @@
 									@foreach($visits_user as $visits_row)
 										@foreach($visits_row as $row)
 										<tr>
+											<td>{{$row->serial_number}}</td>
 											<td>{{$row->ticket_number}}</td>
-										  <td>{{$row->id}}</td>
+											<td>{{$row->ticket_type=="G"?'استقبال عام':'استقبال اصابات'}}</td>
+										  <td>{{$row->registration_datetime}}</td>
 										  <td>{{$row->name}}</td>
 										  <td>{{$row->gender=='M'?'ذكر':'أنثي'}}</td>
-										  <td>{{$row->sid}}</td>
+										  <td>
+											<?php
+													$current_date = new DateTime();
+													$birthdate = new DateTime($row->birthdate);
+													$interval = $current_date->diff($birthdate);
+											?>
+											@if($interval->y > 0)
+												{{ $interval->y }}
+												@if( $interval->y > 11 )
+													{{ "سنة" }}
+												@else
+													{{ "سنوات" }}
+												@endif
+											@elseif($interval->m > 0)
+												{{ $interval->m }}
+												@if( $interval->m > 11 )
+													{{ "شهر" }}
+												@else
+													{{ "شهور" }}
+												@endif
+											@else
+												{{ $interval->d." يوم " }}
+												@if( $interval->d > 11 )
+													{{ "يوم" }}
+												@else
+													{{ "أيام" }}
+												@endif
+											@endif
+											</td>
 										  <td>{{$row->dept_name}}</td>
-										  <td>{{date($row->created_at->format('Y-m-d'))}}</td>
 										  <td>{{$row->user_name}}</td>
 
 										</tr>

@@ -234,6 +234,11 @@
 							  {!! Form::text('file_number',null,array('class'=>'form-control','placeholder'=>'رقم الملف')) !!}
 							  @if ($errors->has('file_number'))<span class="help-block">{{$errors->first('file_number')}}</span>@endif
 						  </div>
+							<div class="form-group @if($errors->has('file_type')) has-error @endif">
+									{!! Form::label('file_type','نوع الملف',array('style'=>'color:red')) !!}
+									{!! Form::select('file_type',$file_types,'',['class' => 'form-control']); !!}
+									@if ($errors->has('file_type'))<span class="help-block">{{$errors->first('file_type')}}</span>@endif
+							</div>
 						  <div class="form-group @if($errors->has('cure_type_id')) has-error @endif">
 						      {!! Form::label('نوع العلاج') !!}
 						      {!! Form::select('cure_type_id',$cure_types,null,['class' => 'form-control']); !!}
@@ -280,6 +285,9 @@ $(document).ajaxComplete(function(){
     $("#overlay").hide();
 });
 $(document).ready(function(){
+
+	$("#reference_doctor_id").prepend('<option></option>');
+	$("#reference_doctor_id").prop('selectedIndex',0);
 
 	if($("#sid").val().length==14)
 		$("#datepicker").attr("disabled","disabled");
@@ -489,6 +497,8 @@ $(document).ready(function(){
 			data: { 'mid':$("#medical_id").val() },
 			success: function (data) {
 				$("#reference_doctor_id").empty();
+				$("#reference_doctor_id").prepend('<option></option>');
+			  $("#reference_doctor_id").prop('selectedIndex',0);
 				if(data['success']=='true'){
 				
 					for (i=0;i<data['data'].length;i++) {

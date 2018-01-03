@@ -18,7 +18,10 @@ class Entrypoint extends Model
 	
 		return $this->belongsToMany('App\User');
 	}
-	
+	public function visits(){
+		
+		return $this->hasMany('App\Visit');
+	}
 	public function data_entry_place_type(){
 		return $this->belongsTo('App\DataEntryPlaceType','type');
 	}

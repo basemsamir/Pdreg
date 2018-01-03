@@ -11,6 +11,7 @@ use App\Visit;
 use App\User;
 use App\Entrypoint;
 use App\CureType;
+use App\FileType;
 use Auth;
 use DB;
 use Validator;
@@ -25,18 +26,17 @@ class PatientController extends Controller
 		$first_medical_unit= MedicalUnit::where('type','d')->first();
 		$first_department_doctors=$first_medical_unit->users()->lists('users.name','users.id');
 		$cure_types=CureType::lists('name','id');
+		$file_types=FileType::lists('name','id');
 		$user=User::find(Auth::id());
 		$entrypoints=$user->entrypoints()->select('name','id')->get();
 		$entrypoint_Array=array();
 		foreach($user->entrypoints as $row)
 			$entrypoint_Array[$row->id]=$row->name;
 		$relations= Relation::lists('name','id');
-		return view('patient',array('p_active'=>'active','relations'=>$relations,'medical_units'=>$medical_units,'entrypoints'=>$entrypoint_Array,'cure_types'=>$cure_types,'first_department_doctors'=>$first_department_doctors));
+		return view('patient',array('p_active'=>'active','relations'=>$relations,'medical_units'=>$medical_units,'entrypoints'=>$entrypoint_Array,'cure_types'=>$cure_types,'file_types'=>$file_types,'first_department_doctors'=>$first_department_doctors));
 	}
 	// index for receiption action
 	public function indexTicket($pid,Request $request){
-		// Restore session after it expired and user return to log in
-
 		if($pid!="")
 		{
 			$patient_data=Patient::find($pid);
@@ -70,7 +70,12 @@ class PatientController extends Controller
 			$patient_data=Patient::find($pid);
 		}
 		$relations=Relation::lists('name', 'id');
-		$medical_units=MedicalUnit::where('type','=','c')->lists('name', 'id');
+		$cure_types=CureType::lists('name','id');
+		$file_types=FileType::lists('name','id');
+		$medical_units=MedicalUnit::where('type','c')->lists('name', 'id');
+		$first_medical_unit= MedicalUnit::where('type','c')->first();
+		$first_clinic_doctors=$first_medical_unit->users()->lists('users.name','users.id');
+		$entrypoint_users=User::where('role_id',4)->lists('name','id');
 		$user=User::find(Auth::id());
 		$entrypoints=$user->entrypoints()->select('name','id')->get();
 		$entrypoints=array();
@@ -87,9 +92,9 @@ class PatientController extends Controller
 			$entrypoints[$row->id]=$row->name;
 		$desk_active="active";
 		if($pid!="" && $pid!="-1")
-			return view('desk_ticket',compact('desk_active','relations','ages','days','medical_units','entrypoints','patient_data'));
+			return view('desk_ticket',compact('desk_active','relations','ages','days','medical_units','first_clinic_doctors','entrypoints','entrypoint_users','file_types','cure_types','patient_data'));
 		else
-			return view('desk_ticket',compact('desk_active','relations','ages','days','medical_units','entrypoints'));
+			return view('desk_ticket',compact('desk_active','relations','ages','days','medical_units','first_clinic_doctors','entrypoints','entrypoint_users','file_types','cure_types'));
 	}
 
 	public function showid($id){
@@ -206,7 +211,7 @@ class PatientController extends Controller
 					$messages["lname.max"]='حقل الأسم الرابع يجب الأ يتعدي :max حرف';
 					$messages["gender.required"]='هؤلاء الحقول مطلوب الأدخال بشكل كامل';
 					$messages["sid.required"]='هؤلاء الحقول مطلوب الأدخال بشكل كامل';
-					$messages["sid.size"]='حقل رقم البطاقة يجب أن يكون مكون من :size رقم';
+					$messages['sid.sin_format'] =  'رقم البطاقة غير صحيح.';
 					$messages["sid.unique"]='رقم البطاقة موجود من قبل';
 					$messages['birthdate.required'] = 'هذا الحقل مطلوب الأدخال.';
 					$messages['birthdate.date'] = 'حقل تاريخ الميلاد يجب أن يكون تاريخ';
@@ -218,15 +223,14 @@ class PatientController extends Controller
 					$constraints['lname']='required|alpha|min:2|max:20';
 					$constraints['mname']='required|alpha|min:2|max:20';
 					$constraints['gender']='required';
-					$constraints['sid']='required|size:14|unique:patients,sid';
+					$constraints['sid']='required|sin_format|unique:patients,sid';
 					$constraints['birthdate'] = 'required|date';
 					$constraints['address']='required|min:3';
 				}
 				$messages['phone_num.max'] = 'حقل رقم التليفون يجب الأ يتعدي :max رقم';
 				$messages['phone_num.min'] = 'حقل رقم التليفون يجب الأ يقل عن :min أرقام';
 				$messages['social_status.min']='حقل الحالة الاجتماعية يجب الأ يقل عن :min حروف';
-				$messages['e_sid.required'] = 'هذا الحقل مطلوب الأدخال';
-				$messages['e_sid.size'] = 'حقل رقم البطاقة الخاص بالمرافق يجب أن يكون مكون من :size رقم';
+				$messages['e_sid.sin_format'] =  'رقم البطاقة غير صحيح.';
 				$messages['e_sid.different'] = 'حقل رقم بطاقة المرافق يجب أن يكون مختلف عن رقم بطاقة المريض';
 				$messages['c_name.required'] = 'هذا الحقل مطلوب الأدخال';
 				$messages['c_name.min'] ='هذا الحقل يجب الأ يقل عن :min حروف';
@@ -243,9 +247,9 @@ class PatientController extends Controller
 				$constraints['phone_num']='min:4|max:20';
 				$constraints['social_status']='min:4';
 				if($input['sid']!="")
-					$constraints['e_sid']='required|size:14|different:sid';
+					$constraints['e_sid']='sin_format|different:sid';
 				else
-					$constraints['e_sid']='required|size:14';
+					$constraints['e_sid']='sin_format';
 				$constraints['c_name']='required|min:2|max:50';
 				$constraints['m_address']='min:3';
 				$constraints['m_job']='min:3';
@@ -257,21 +261,6 @@ class PatientController extends Controller
 
 				$input=$request->all();
 				$this->validate($request,$constraints,$messages);
-
-				$arr['e_sid']=$this->return_birtdate($input['e_sid']);
-				$messages = [
-					'e_sid.date' => 'الرقم القومي غير صحيح'
-				];
-				$validator = Validator::make($arr, [
-				  'e_sid' => 'date',
-				],$messages);
-
-				if ($validator->fails()) {
-					return redirect()->back()
-									 ->withErrors($validator)
-									 ->withInput();
-				}
-
 				DB::beginTransaction();
 				try{
 					if($input['patient_id']== ""){
@@ -308,7 +297,7 @@ class PatientController extends Controller
 						'patient_id'=>$pid,
 						'ticket_num'=>0,
 						'c_name'=>$input['c_name'],
-						'sid'=>$input['e_sid'],
+						'sid'=>$input['e_sid']==""?null:$input['e_sid'],
 						'relation_id'=>$input['relation_id']==""?null:$input['relation_id'],
 						'address'=>$input['m_address']==""?null:$input['m_address'],
 						'job'=>$input['m_job']==""?null:$input['m_job'],
@@ -316,7 +305,8 @@ class PatientController extends Controller
 						'converted_by_doctor'=>$input['converted_by_doctor']==""?null:$input['converted_by_doctor'],
 						'entry_time'=>$input['entry_time'],
 						'room_number'=>$input['room_number']==""?null:$input['room_number'],
-						'file_number'=>$input['file_number']==""?null:$input['file_number'],
+						'file_number'=>$input['file_number'],
+						'file_type'=>$input['file_type'],
 						'cure_type_id'=>$input['cure_type_id']==""?null:$input['cure_type_id'],
 						'contract'=>$input['contract']==""?null:$input['contract'],
 						'reference_doctor_id'=>$input['reference_doctor_id']==""?null:$input['reference_doctor_id'],
@@ -411,7 +401,7 @@ class PatientController extends Controller
 					$this->validate($request, $constraints ,$messages);
 
 					if($input['reservation_type'] == "T&E"){
-						$arr['c_sid']=$this->return_birtdate($input['c_sid']);
+						$arr['c_sid']=return_birthdate($input['c_sid']);
 						$messages = [
 							'c_sid.date' => 'الرقم القومي غير صحيح'
 						];
@@ -547,7 +537,7 @@ class PatientController extends Controller
 
 			if($input['sid'] != ""){
 
-				$arr['sid']=$this->return_birtdate($input['sid']);
+				$arr['sid']=return_birthdate($input['sid']);
 				$messages = [
 					'sid.date' => 'الرقم القومي غير صحيح'
 				];
@@ -588,7 +578,7 @@ class PatientController extends Controller
 
 			}
 			if($input['reservation_type'] == "T&E"){
-				$arr['c_sid']=$this->return_birtdate($input['c_sid']);
+				$arr['c_sid']=return_birthdate($input['c_sid']);
 				$messages = [
 					'c_sid.date' => 'الرقم القومي غير صحيح'
 				];
@@ -662,7 +652,7 @@ class PatientController extends Controller
 	{
 		$input=$request->all();
 		// If code is not empty, it means that the patient data is already exist
-
+		//dd($input);
 		if(isset($input['id']) && $input['id'] != "")
 		{
 			// check if a patient is already exist ( visit closed flag is false ) in the same clinic where he/she reserves.
@@ -679,93 +669,140 @@ class PatientController extends Controller
 					$request->session()->flash('flash_message', "هذا المريض موجود فى القسم الداخلي و لم يتم اخراجه");
 				}
 				else{
-					$clinic_ticket=Visit::where('ticket_number',$input['ticket_num'])
-														->whereNull('ticket_type')
-														->first();
+					if($input['ticket_status'] == "T")
+						$clinic_ticket=Visit::where('ticket_number',$input['ticket_num'])
+															->whereNull('ticket_type')
+															->first();
 					$messages=[
 						'ticket_num.required' => 'هذا الحقل مطلوب الأدخال.',
 						'ticket_num.numeric' => 'حقل رقم التذكرة يجب أن يكون رقم فقط .',
 						'ticket_num.unique' => 'رقم التذكرة موجود من قبل .',
 						'ticket_type.required' => 'هذا الحقل مطلوب الأدخال.',
+						'serial_number.required' => 'هذا الحقل مطلوب الأدخال.',
+						'reg_date.required' => 'هذا الحقل مطلوب الأدخال.',
 						'entry.required' => 'هذا الحقل مطلوب الأدخال.',
 						'medical_id.required' => 'هذا الحقل مطلوب الأدخال.',
+						'reservation_type.required' => 'هذا الحقل مطلوب الأدخال.',
+						'sent_by_person.required' => 'هذا الحقل مطلوب الأدخال.',
+						'ticket_companion_name.required_with' => 'هذا الحقل مطلوب فى حال وجود رقم البطاقة',
+						'ticket_companion_sin.sin_format' => 'رقم البطاقة غير صحيح.',
+						'ticket_companion_sin.different' => 'رقم البطاقة يجب ان يكون مختلف عن رقم بطاقة المريض',
+						'sid.sin_format' => 'رقم البطاقة غير صحيح.',
 					];
-					if(count(	$clinic_ticket) > 0)
-						$constraints['ticket_num']='required|numeric|unique:visits,ticket_number,'.$clinic_ticket->id;
-					else
-						$constraints['ticket_num']='required|numeric|unique:visits,ticket_number';
+					
+					/* in case of ticket status ("T"=> number, "F"=> free word) is T, user types ticket numbar 
+					and the oposite condition is F, user types free word */ 
+					if($input['ticket_status'] == "T"){
+						if(count($clinic_ticket) > 0){
+							$constraints['ticket_num']='required|numeric|unique:visits,ticket_number,'.$clinic_ticket->id;
+						}
+						else{
+							$constraints['ticket_num']='required|numeric|unique:visits,ticket_number';
+						}
+							
+					}
 					$constraints['ticket_type']='required';
 					$constraints['entry']='required';
 					$constraints['medical_id']='required';
+					$constraints['reservation_type']='required';
+					$constraints['sent_by_person']='required';
+					$constraints['ticket_companion_name']='required_with:ticket_companion_sin';
+					$constraints['ticket_companion_sin']='sin_format|different:sid';
+					if(isset($input['sid'])){
+						$constraints['sid']='sin_format';
+					}
 					if($input['reservation_type'] == "T&E"){
-
-						$messages['c_name.required']= 'هذا الحقل مطلوب الأدخال.';
+						
+						$messages['c_name.required_with'] = 'هذا الحقل مطلوب فى حال وجود رقم البطاقة';
 						$messages['c_name.min']= 'هذا الحقل يجب الأ يقل عن :min حروف';
 						$messages['c_name.max']= 'هذا الحقل يجب الأ يتعدي :max حرف';
 						$messages['c_address.min'] = 'هذا الحقل يجب الأ يقل عن :min حروف';
-						$messages['job.min'] = 'هذا الحقل يجب الأ يقل عن :min حروف';
-						$messages['c_sid.size'] = 'حقل رقم البطاقة الخاص بالمرافق يجب أن يكون مكون من :size رقم.';
+						$messages['c_job.min'] = 'هذا الحقل يجب الأ يقل عن :min حروف';
 						$messages['c_sid.different'] = 'حقل رقم بطاقة المرافق يجب أن يكون مختلف عن رقم بطاقة المريض.';
-						$messages['entry_time.required']= 'هذا الحقل مطلوب الأدخال.';
-
-						$constraints['c_name']='required|min:2|max:50';
+						$messages['c_sid.sin_format'] = 'رقم البطاقة غير صحيح.';
+						$messages['file_number.required'] = 'هذا الحقل مطلوب الأدخال.';
+						$messages['file_type.required'] = 'هذا الحقل مطلوب الأدخال';
+						
+						$constraints['c_name']='required_with:c_sid|min:2|max:50';
 						$constraints['c_address']='min:2';
-						$constraints['job']='min:2';
-						$constraints['c_sid']='size:14|different:hidden_sid';
-						$constraints['entry_time']='required';
+						$constraints['c_job']='min:2';
+						$constraints['c_sid']='sin_format|different:sid';
+						$constraints['file_number']='required';
+						$constraints['file_type']='required';
 					}
 					$this->validate($request, $constraints ,$messages);
-
-					if($input['reservation_type'] == "T&E" && $input['c_sid'] != ""){
-						$arr['c_sid']=$this->return_birtdate($input['c_sid']);
-						$messages = [
-							'c_sid.date' => 'الرقم القومي غير صحيح'
-						];
-						$validator = Validator::make($arr, [
-						  'c_sid' => 'date',
-					  ],$messages);
-
-					  if ($validator->fails()) {
-						  return redirect()->back()
-											 ->withErrors($validator)
-											 ->withInput();
-					  }
+					$patient_data=array();
+					if(isset($input['sid']) && $input['sid']!=""){
+						$birthdate=return_birthdate($input['sid']);
+						$patient_data['sid']=$input['sid'];
+						$patient_data['birthdate']=$birthdate;
 					}
-
-					$visit_input_data=
-					array(
-						'patient_id'=>$input['id'],
-						'ticket_number'=>$input['ticket_num'],
-						'ticket_type'=>$input['ticket_type'],
-						'user_id'=>Auth::id(),
-						'entry_id'=>$input['entry']
-					);
-					if($input['reservation_type'] == "T&E"){
-						$visit_input_data['c_name']=$input['c_name'];
-						$visit_input_data['sid']=$input['c_sid']==""?null:$input['c_sid'];
-						$visit_input_data['relation_id']=$input['relation_id']==""?null:$input['relation_id'];
-						$visit_input_data['address']=$input['c_address']==""?null:$input['c_address'];
-						$visit_input_data['job']=$input['job']==""?null:$input['job'];
-						$visit_input_data['entry_time']=$input['entry_time'];
-						$visit_input_data['entry_date']=date('Y-m-d');
+					if(isset($input['address'])){
+						$patient_data['address']=$input['address'];
 					}
-					$visit=Visit::create($visit_input_data);
-					if($input['reservation_type'] == "T&E"){
-						// Get the attached department to chosen clinic
-						$department_id= MedicalUnit::find($input['medical_id']);
-						if(is_null($department_id->parent_department_id)){
-								return redirect()->back()
-												->withFlashMessage( "يجب أن يكون للعيادة القسم الخاص بها لكي يتم عملية دخول المريض")
-												->withMessageType("false")
-												->withInput();
+					if(isset($input['job'])){
+						$patient_data['job']=$input['job'];
+					}
+					DB::beginTransaction();
+					try{
+						Patient::find($input['id'])->update($patient_data);
+						$visit_input_data=
+						array(
+							'patient_id'=>$input['id'],
+							'serial_number'=>$input['serial_number'],
+							'ticket_number'=>$input['ticket_status'] == "T"?$input['ticket_num']:"مجاني",
+							'ticket_status'=>$input['ticket_status'],
+							'ticket_type'=>$input['ticket_type'],
+							'user_id'=>Auth::id(),
+							'entry_id'=>$input['entry'],
+							'registration_datetime'=>Carbon::parse($input['reg_date']." ".$input['reg_time']),
+							'watching_status'=>$input['watching_status']==""?null:$input['watching_status'],
+							'sent_by_person'=>$input['sent_by_person'],
+							'ticket_companion_name'=>$input['ticket_companion_name']==""?null:$input['ticket_companion_name'],
+							'ticket_companion_sin'=>$input['ticket_companion_sin']==""?null:$input['ticket_companion_sin']
+						);
+						if($input['reservation_type'] == "T&E"){
+							$visit_input_data['c_name']=$input['c_name']==""?null:$input['c_name'];
+							$visit_input_data['sid']=$input['c_sid']==""?null:$input['c_sid'];
+							$visit_input_data['relation_id']=$input['relation_id']==""?null:$input['relation_id'];
+							$visit_input_data['address']=$input['c_address']==""?null:$input['c_address'];
+							$visit_input_data['job']=$input['c_job']==""?null:$input['c_job'];
+							$visit_input_data['room_number']=$input['room_number']==""?null:$input['room_number'];
+							$visit_input_data['file_number']=$input['file_number'];
+							$visit_input_data['file_type']=$input['file_type'];
+							$visit_input_data['cure_type_id']=$input['cure_type_id']==""?null:$input['cure_type_id'];
+							$visit_input_data['contract']=$input['contract']==""?null:$input['contract'];
+							$visit_input_data['converted_by_doctor']=$input['converted_by_doctor']==""?null:$input['converted_by_doctor'];
+							$visit_input_data['reference_doctor_id']=$input['reference_doctor_id']==""?null:$input['reference_doctor_id'];
+							
+		
+							$visit_input_data['entry_time']=$input['reg_time'];
+							$visit_input_data['entry_date']=$input['reg_date'];
 						}
-						$visit->medicalunits()->attach($department_id->parent_department_id);
+						$visit=Visit::create($visit_input_data);
+						if($input['reservation_type'] == "T&E"){
+							// Get the attached department to chosen clinic
+							$department_id= MedicalUnit::find($input['medical_id']);
+							if(is_null($department_id->parent_department_id)){
+									return redirect()->back()
+													->withFlashMessage( "يجب أن يكون للعيادة القسم الخاص بها لكي يتم عملية دخول المريض")
+													->withMessageType("false")
+													->withInput();
+							}
+							$visit->medicalunits()->attach($department_id->parent_department_id);
+						}
+						else{
+							$visit->medicalunits()->attach($input['medical_id']);
+						}
+						DB::commit();
+						$request->session()->flash('flash_message', "تم التسجيل بنجاح - كود المريض : $input[id] ");
+						$request->session()->flash('vid', $visit->id);
 					}
-					else{
-						$visit->medicalunits()->attach($input['medical_id']);
+					catch(\Expection $e){
+
+						DB::rollback();
 					}
-					$request->session()->flash('flash_message', "تم التسجيل بنجاح - كود المريض : $input[id] ");
-					$request->session()->flash('vid', $visit->id);
+					
 				}
 			}
 		}
@@ -787,9 +824,12 @@ class PatientController extends Controller
 				'lname.min' => 'حقل الأسم الرابع يجب الأ يقل عن :min حروف',
 				'lname.max' => 'حقل الأسم الرابع يجب الأ يتعدي :max حرف',
 				'lname.alpha' =>'حقل الأسم الرابع أن يكون حروف فقط بدون وجود مسافات.',
+				'serial_number.required' => 'هذا الحقل مطلوب الأدخال.',
+				'reg_date.required' => 'هذا الحقل مطلوب الأدخال.',
 				'gender.required' => 'هذا الحقل مطلوب الأدخال.',
 				'address.required' => 'هذا الحقل مطلوب الأدخال.',
-				'sid.size' => 'حقل رقم البطاقة يجب أن يكون مكون من :size رقم.',
+				'job.required' => 'هذا الحقل مطلوب الأدخال.',
+				'sid.sin_format' => 'رقم البطاقة غير صحيح.',
 				'sid.unique' => 'رقم البطاقة موجود من قبل.',
 				'year_age.numeric' => 'حقل عدد السنين يجب ان يكون رقم فقط.',
 				'year_age.required_without_all' => 'حقل عدد السنين يجب أن يكون أكبر من 0 فى حالة عدم وجود عدد أيام أو عدد أشهر',
@@ -800,110 +840,84 @@ class PatientController extends Controller
 				'entry.required' => 'هذا الحقل مطلوب الأدخال.',
 				'medical_id.required' => 'هذا الحقل مطلوب الأدخال.',
 				'reservation_type.required' => 'هذا الحقل مطلوب الأدخال.',
+				'sent_by_person.required' => 'هذا الحقل مطلوب الأدخال.',
+				'ticket_companion_name.required_with' => 'هذا الحقل مطلوب فى حال وجود رقم البطاقة',
+				'ticket_companion_sin.sin_format' => 'رقم البطاقة غير صحيح.',
+				'ticket_companion_sin.different' => 'رقم البطاقة يجب ان يكون مختلف عن رقم بطاقة المريض',
 			];
-			$clinic_ticket=Visit::where('ticket_number',$input['ticket_num'])
-													->whereNull('ticket_type')
-													->first();
+			if($input['ticket_status'] == "T")
+				$clinic_ticket=Visit::where('ticket_number',$input['ticket_num'])
+														->whereNull('ticket_type')
+														->first();
 
 			$constraints['fname'] = 'required|alpha|min:2|max:20';
 			$constraints['sname'] = 'required|alpha|min:2|max:20';
 			$constraints['mname'] = 'required|alpha|min:2|max:20';
 			$constraints['lname'] = 'alpha|min:2|max:20';
+			$constraints['serial_number'] = 'required';
+			$constraints['reg_date'] = 'required|date';
+			$constraints['reg_time'] = 'required';
 			$constraints['gender'] = 'required';
 			$constraints['address'] = 'required';
-			$constraints['sid'] = 'size:14|unique:patients,sid';
-			$constraints['year_age'] = 'numeric|required_without_all:month_age,day_age';
-			if(count($clinic_ticket) > 0)
-				$constraints['ticket_num']='required|numeric|unique:visits,ticket_number,'.$clinic_ticket->id;
-			else
-				$constraints['ticket_num']='required|numeric|unique:visits,ticket_number';
+			$constraints['job'] = 'required';
+			$constraints['sid'] = 'sin_format|unique:patients,sid';
+			if($input['sid'] == "")
+				$constraints['year_age'] = 'numeric|required_without_all:month_age,day_age';
+			/* in case of ticket status ("T"=> number, "F"=> free word) is T, user types ticket numbar 
+			and the oposite condition is F, user types free word */ 
+			if($input['ticket_status'] == "T"){
+				if(count($clinic_ticket) > 0)
+					$constraints['ticket_num']='required|numeric|unique:visits,ticket_number,'.$clinic_ticket->id;
+				else
+					$constraints['ticket_num']='required|numeric|unique:visits,ticket_number';
+			}
 			$constraints['ticket_type']='required';
 			$constraints['entry']='required';
 			$constraints['medical_id']='required';
 			$constraints['reservation_type']='required';
+			$constraints['sent_by_person']='required';
+			$constraints['ticket_companion_name']='required_with:ticket_companion_sin';
+			$constraints['ticket_companion_sin']='sin_format|different:sid';
 
 			if($input['reservation_type'] == "T&E"){
 
-				$messages['c_name.required']= 'هذا الحقل مطلوب الأدخال.';
+				$messages['c_name.required_with'] = 'هذا الحقل مطلوب فى حال وجود رقم البطاقة';
 				$messages['c_name.min']= 'هذا الحقل يجب الأ يقل عن :min حروف';
 				$messages['c_name.max']= 'هذا الحقل يجب الأ يتعدي :max حرف';
 				$messages['c_address.min'] = 'هذا الحقل يجب الأ يقل عن :min حروف';
-				$messages['job.min'] = 'هذا الحقل يجب الأ يقل عن :min حروف';
-				$messages['c_sid.size'] = 'حقل رقم البطاقة الخاص بالمرافق يجب أن يكون مكون من :size رقم.';
+				$messages['c_job.min'] = 'هذا الحقل يجب الأ يقل عن :min حروف';
 				$messages['c_sid.different'] = 'حقل رقم بطاقة المرافق يجب أن يكون مختلف عن رقم بطاقة المريض.';
-				$messages['entry_time.required']= 'هذا الحقل مطلوب الأدخال.';
-
-				$constraints['c_name']='required|min:2|max:50';
+				$messages['c_sid.sin_format'] = 'رقم البطاقة غير صحيح.';
+				$messages['file_number.required'] = 'هذا الحقل مطلوب الأدخال.';
+				$messages['file_type.required'] = 'هذا الحقل مطلوب الأدخال';
+				
+				$constraints['c_name']='required_with:c_sid|min:2|max:50';
 				$constraints['c_address']='min:2';
-				$constraints['job']='min:2';
-				$constraints['c_sid']='size:14|different:hidden_sid';
-				$constraints['entry_time']='required';
+				$constraints['c_job']='min:2';
+				$constraints['c_sid']='sin_format|different:sid';
+				$constraints['file_number']='required';
+				$constraints['file_type']='required';
 			}
 			$this->validate($request, $constraints ,$messages);
 
 			$input['name']=$input['fname']." ".$input['sname']." ".$input['mname']." ".$input['lname'];
 			unset($input['fname']);unset($input['sname']);unset($input['mname']);unset($input['lname']);
 
-			if($input['sid'] != ""){
-
-				$arr['sid']=$this->return_birtdate($input['sid']);
-				$messages = [
-					'sid.date' => 'الرقم القومي غير صحيح'
-				];
-				$validator = Validator::make($arr, [
-					'sid' => 'date',
-				],$messages);
-
-				if ($validator->fails()) {
-					return redirect()->back()
-										 ->withErrors($validator)
-										 ->withInput();
-				}
-				$birthdate=$arr['sid'];
-				$patient_input=
-				array(
-					'sid'=>$input['sid'],
-					'name'=>$input['name'],
-					'gender'=>$input['gender'],
-					'address'=>$input['address'],
-					'birthdate'=>$birthdate,
-					'age'=>$input['year_age'],
-				);
-			}
-			else{
-				$birthdate=strtotime("-".($input['day_age']==""?0:$input['day_age'])." day",time());
-				$birthdate=strtotime("-".($input['month_age']==""?0:$input['month_age'])." month",$birthdate);
-				$birthdate=strtotime("-".($input['year_age']==""?0:$input['year_age'])." year",$birthdate);
-
-				$birthdate=date('Y-m-d',$birthdate);
-				$patient_input=
-				array(
-					'name'=>$input['name'],
-					'gender'=>$input['gender'],
-					'address'=>$input['address'],
-					'birthdate'=>$birthdate,
-					'age'=>$input['year_age'],
-				);
-
-			}
-			if($input['reservation_type'] == "T&E" && $input['c_sid'] != ""){
-
-				$arr['c_sid']=$this->return_birtdate($input['c_sid']);
-				$messages = [
-					'c_sid.date' => 'الرقم القومي غير صحيح'
-				];
-				$validator = Validator::make($arr, [
-				  'c_sid' => 'date',
-				],$messages);
-
-				if ($validator->fails()) {
-					return redirect()->back()
-							         ->withErrors($validator)
-								     ->withInput();
-				}
-
-			}
-
+			if($input['sid'] == "")
+				$birthdate=return_birthdate($input['day_age'],$input['month_age'],$input['year_age']);
+			else
+				$birthdate=return_birthdate($input['sid']);
+			
+			$patient_input=
+			array(
+				'sid'=>$input['sid']==""?null:$input['sid'],
+				'name'=>$input['name'],
+				'gender'=>$input['gender'],
+				'address'=>$input['address'],
+				'birthdate'=>$birthdate,
+				'job'=>$input['job'],
+			);
+			
 			DB::beginTransaction();
 
 			try{
@@ -914,36 +928,52 @@ class PatientController extends Controller
 				$visit_input_data=
 				array(
 					'patient_id'=>$pid,
-					'ticket_number'=>$input['ticket_num'],
+					'serial_number'=>$input['serial_number'],
+					'ticket_number'=>$input['ticket_status'] == "T"?$input['ticket_num']:"مجاني",
+					'ticket_status'=>$input['ticket_status'],
 					'ticket_type'=>$input['ticket_type'],
 					'user_id'=>Auth::id(),
-					'entry_id'=>$input['entry']
+					'entry_id'=>$input['entry'],
+					'registration_datetime'=>Carbon::parse($input['reg_date']." ".$input['reg_time']),
+					'watching_status'=>$input['watching_status']==""?null:$input['watching_status'],
+					'sent_by_person'=>$input['sent_by_person'],
+					'ticket_companion_name'=>$input['ticket_companion_name']==""?null:$input['ticket_companion_name'],
+					'ticket_companion_sin'=>$input['ticket_companion_sin']==""?null:$input['ticket_companion_sin']
 				);
 				if($input['reservation_type'] == "T&E"){
-					$visit_input_data['c_name']=$input['c_name'];
+					$visit_input_data['c_name']=$input['c_name']==""?null:$input['c_name'];
 					$visit_input_data['sid']=$input['c_sid']==""?null:$input['c_sid'];
 					$visit_input_data['relation_id']=$input['relation_id']==""?null:$input['relation_id'];
 					$visit_input_data['address']=$input['c_address']==""?null:$input['c_address'];
-					$visit_input_data['job']=$input['job']==""?null:$input['job'];
-					$visit_input_data['entry_time']=$input['entry_time'];
-					$visit_input_data['entry_date']=date('Y-m-d');
+					$visit_input_data['job']=$input['c_job']==""?null:$input['c_job'];
+					$visit_input_data['room_number']=$input['room_number']==""?null:$input['room_number'];
+					$visit_input_data['file_number']=$input['file_number'];
+					$visit_input_data['file_type']=$input['file_type'];
+					$visit_input_data['cure_type_id']=$input['cure_type_id']==""?null:$input['cure_type_id'];
+					$visit_input_data['contract']=$input['contract']==""?null:$input['contract'];
+					$visit_input_data['converted_by_doctor']=$input['converted_by_doctor']==""?null:$input['converted_by_doctor'];
+					$visit_input_data['reference_doctor_id']=$input['reference_doctor_id']==""?null:$input['reference_doctor_id'];
+					
+
+					$visit_input_data['entry_time']=$input['reg_time'];
+					$visit_input_data['entry_date']=$input['reg_date'];
 				}
 				$visit=Visit::create($visit_input_data);
 				if($input['reservation_type'] == "T&E"){
 					// Get the attached department to chosen clinic
-					$department_id= MedicalUnit::find($input['medical_id']);
-					if(is_null($department_id->parent_department_id)){
-							DB::rollback();
+					$clinic_id= MedicalUnit::find($input['medical_id']);
+					if(is_null($clinic_id->parent_department_id)){
 							return redirect()->back()
-															->withFlashMessage( "يجب أن يكون للعيادة القسم الخاص بها لكي يتم عملية دخول المريض")
-															->withMessageType("false")
-															->withInput();
+											->withFlashMessage( "يجب أن يكون للعيادة القسم الخاص بها لكي يتم عملية دخول المريض")
+											->withMessageType("false")
+											->withInput();
 					}
-					$visit->medicalunits()->attach($department_id->parent_department_id);
+					$visit->medicalunits()->attach($clinic_id->parent_department_id);
 				}
 				else{
 					$visit->medicalunits()->attach($input['medical_id']);
 				}
+				
 				DB::commit();
 				$request->session()->flash('flash_message', "تم التسجيل بنجاح - كود المريض : $pid ");
 				$request->session()->flash('vid',$visit->id);
@@ -958,24 +988,8 @@ class PatientController extends Controller
 
 	}
 
-
-	private function return_birtdate($sin){
-		if($sin[0] == 2)
-			$prifx_year="19";
-		else if($sin[0] == 3)
-			$prifx_year="20";
-		else if($sin[0] == 4)
-			$prifx_year="21";
-
-		$year=$prifx_year."".$sin[1]."".$sin[2];
-		$month=$sin[3]."".$sin[4];
-		$day=$sin[5]."".$sin[6];
-		return $year."-".$month."-".$day;
-	}
 	public function show(Request $request)
 	{
-		// Restore session after it expired and user return to log in
-
 		$patients= Patient::orderBy('id', 'desc')->select('id','name','gender','sid','birthdate','created_at','address')->take(100)->get();
 
 		$user=User::find(Auth::id());
@@ -1014,12 +1028,11 @@ class PatientController extends Controller
 				  ->join('medical_units','medical_unit_visit.medical_unit_id','=','medical_units.id')
 				  ->join('patients','patients.id','=','visits.patient_id')
 				  ->leftJoin('users','users.id','=','visits.reference_doctor_id')
-				  ->leftJoin('cure_types','cure_types.id','=','visits.cure_type_id')
 				  ->where('visits.id','=',$visit_id)
 				  ->where('patients.id','=',$id)
 				  ->where('type','=','d')
 				  ->select('patients.id as id','visits.id as vid','patients.name as name','patients.birthdate','patients.sid','medical_units.id as dept_id','c_name','visits.sid as c_sid','relation_id','visits.address as vaddress','visits.job as vjob','visits.phone_num as vphone','entry_id',
-				  'entry_time','entry_date','reference_doctor_id','room_number','file_number','contract','cure_type_id'
+				  'entry_time','entry_date','reference_doctor_id','room_number','file_number','contract','cure_type_id','file_type'
 				  ,'converted_by_doctor')
 				  ->get();
 		//dd($patient_visit);
@@ -1039,16 +1052,16 @@ class PatientController extends Controller
 			$first_department_doctors=$medical_unit->users()->lists('users.name','users.id');
 		}
 		$cure_types=CureType::lists('name','id');
-
+		$file_types=FileType::lists('name','id');
 		$sub_type_entrypoint=$user->entrypoints()->first()->sub_type;
 
-		return view('addvisits',array('s_active'=>'active','data'=>$patient_visit,'relations'=>$relations,'medicalunits'=>$medicalunits,'entrypoints'=>$entrypoint_Array,'first_department_doctors'=>$first_department_doctors,'cure_types'=>$cure_types,'sub_type_entrypoint'=>$sub_type_entrypoint));
+		return view('addvisits',array('s_active'=>'active','data'=>$patient_visit,'relations'=>$relations,'medicalunits'=>$medicalunits,'entrypoints'=>$entrypoint_Array,'first_department_doctors'=>$first_department_doctors,'cure_types'=>$cure_types,'file_types'=>$file_types,'sub_type_entrypoint'=>$sub_type_entrypoint));
 	}
 	public function storeVisit(Request $request,$pid,$visit_id)
 	{
 		$input=$request->all();
 		// Common constraints and their displayed messages
-		$messages['sid.size'] = 'حقل رقم البطاقة الخاص بالمرافق يجب أن يكون مكون من :size رقم';
+		$messages['sid.sin_format'] = 'رقم القومي غير صحيح';
 		$messages['sid.different'] = 'حقل رقم بطاقة المرافق يجب أن يكون مختلف عن رقم بطاقة المريض';
 		$messages['c_name.required'] = 'هذا الحقل مطلوب الأدخال';
 		$messages['c_name.min'] ='هذا الحقل يجب الأ يقل عن :min حروف';
@@ -1059,7 +1072,7 @@ class PatientController extends Controller
 		$messages['phone_num.max'] = 'هذا الحقل يجب الأ يتعدي :max حرف';
 
 
-		$constraints['sid']='size:14|different:patient_sid';
+		$constraints['sid']='sin_format|different:patient_sid';
 		$constraints['c_name']='required|min:2|max:50';
 		$constraints['address']='min:3';
 		$constraints['job']='min:3';
@@ -1085,25 +1098,6 @@ class PatientController extends Controller
 			$constraints['entry_time']='required';
 		}
 		$this->validate($request,$constraints,$messages);
-
-		if($input['sid']!=""){
-			$arr['sid']=$this->return_birtdate($input['sid']);
-			$messages = [
-				'sid.date' => 'الرقم القومي غير صحيح'
-			];
-			$validator = Validator::make($arr, [
-			  'sid' => 'date',
-			],$messages);
-
-			if ($validator->fails()) {
-				return redirect()->back()
-								 ->withErrors($validator)
-								 ->withInput();
-			}
-
-		}
-
-
 		$input['patient_id']=$input['code'];
 		// This condition for updating inpatient visit data which patient has already existed
 		// Else we will insert new visit data with current patient data
@@ -1116,7 +1110,8 @@ class PatientController extends Controller
 				$visit->address=$input['address']==""?null:$input['address'];$visit->job=$input['job']==""?null:$input['job'];$visit->phone_num=$input['phone_num']==""?null:$input['phone_num'];
 				$visit->converted_by_doctor=$input['converted_by_doctor']==""?null:$input['converted_by_doctor'];
 				$visit->room_number=$input['room_number']==""?null:$input['room_number'];
-				$visit->file_number=$input['file_number']==""?null:$input['file_number'];
+				$visit->file_number=$input['file_number'];
+				$visit->file_type=$input['file_type'];
 				$visit->cure_type_id=$input['cure_type_id']==""?null:$input['cure_type_id'];
 				$visit->contract=$input['contract']==""?null:$input['contract'];
 				$visit->reference_doctor_id=!isset($input['reference_doctor_id'])?null:$input['reference_doctor_id'];
@@ -1169,7 +1164,8 @@ class PatientController extends Controller
 				$visit->entry_date=$input['entry_date']; $visit->entry_time=$input['entry_time'];
 				$visit->converted_by_doctor=$input['converted_by_doctor']==""?null:$input['converted_by_doctor'];
 				$visit->room_number=$input['room_number']==""?null:$input['room_number'];
-				$visit->file_number=$input['file_number']==""?null:$input['file_number'];
+				$visit->file_number=$input['file_number'];
+				$visit->file_type=$input['file_type'];
 				$visit->cure_type_id=$input['cure_type_id']==""?null:$input['cure_type_id'];
 				$visit->contract=$input['contract']==""?null:$input['contract'];
 				$visit->reference_doctor_id=$input['reference_doctor_id']==""?null:$input['reference_doctor_id'];
@@ -1239,7 +1235,7 @@ class PatientController extends Controller
 			$header="بيانات المرضي الداخلي المضافة حديثا";$medical_type="d";
 		}
 		elseif($user_row['role_id']==5 || $user_row['role_id']==7){
-			$header="بيانات حجز كشف المرضي المضافة حديثا";$medical_type="c";
+			$header="بيانات حجز كشف المرضي المضافة حديثا خلال شهر";$medical_type="c";
 		}
 		if($user_row['role_id']==4){
 			$visits = Visit::join('medical_unit_visit', 'visits.id', '=', 'medical_unit_visit.visit_id')
@@ -1265,10 +1261,12 @@ class PatientController extends Controller
 						  $query->where('entry_id',$eid)
 						        ->orWhere('convert_to_entry_id',$eid);
 					  })
-
-					  ->select('patients.id','patients.name','patients.gender','patients.sid','medical_units.name as dept_name','visits.id as visit_id','visits.ticket_number','ticket_type','convert_to_entry_id','visits.created_at','visits.closed')
+					  ->whereBetween('visits.created_at',[Carbon::today()->subMonth()->format('Y-m-d'),Carbon::tomorrow()->format('Y-m-d')])
+					  ->select('patients.id','patients.name','patients.gender','patients.sid','medical_units.name as dept_name','visits.id as visit_id','visits.ticket_number','ticket_type','convert_to_entry_id','visits.created_at','visits.closed','visits.registration_datetime')
 					  ->orderBy('visits.id', 'desc')
-					  ->orderBy('medical_unit_visit.created_at', 'desc')->take(100)->get();
+					  ->orderBy('medical_unit_visit.created_at', 'desc')
+					   
+					  ->get();
 		}
 		return view('show_visits',array('sv_active'=>'active','table_header'=>$header,'data'=>$visits,'medicalunits'=>$medical_units,'role_name'=>$role_name,'desks'=>$desks,'sub_type_entrypoint'=>$sub_type_entrypoint));
 	}
@@ -1369,7 +1367,7 @@ class PatientController extends Controller
 		}
 	}
 	public function checkexistPID(Request $request){
-		$patients= Patient::where('id',$request->get('pid'))->select('id','sid','name','birthdate','gender')->get();
+		$patients= Patient::where('id',$request->get('pid'))->select('id','sid','name','birthdate','gender','address','job','social_status','phone_num')->get();
 		if(count($patients) > 0)
 			return response()->json(['success' => 'true','data'=>$patients]);
 		else

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use App\Http\Requests;
+use App\Http\Requests\MedicalReportsRequest;
 use App\Visit;
 use App\MedicalUnit;
 use App\Patient;
@@ -21,20 +22,14 @@ use Validator;
 use File;
 use DateTime;
 use Activity;
+use Carbon\Carbon;
 class AdminController extends Controller
 {
     //
 	public function index(Request $request){
-		$outpatient_visits=$this->_getNumberVisits('c',date('Y-m-d'));
-		$outpatient_visit_count=0;
-		if(isset($outpatient_visits[0])){
-			foreach($outpatient_visits as $visits)
-				$outpatient_visit_count+=$visits->numberOfVisits;
-
-		}
-		else
-			$outpatient_visits=0;
-		$inpatient_visits=Visit::numberofinpatients();
+		$outpatient_clinic_visits=Visit::numberofoutpatientsfromclinic()->count();
+		$outpatient_desk_visits=Visit::numberofoutpatientsfromdesk()->count();
+		$inpatient_visits=$this->_numberOfInpatients();
 		$patients_count=Patient::numberofpatientstoday()->count();
 		$user_ids=User::whereNotIn('role_id',[1,6])->get(['id']);
 		$role_name='Admin';
@@ -42,8 +37,19 @@ class AdminController extends Controller
 		$user = new User;
 		$loggable_number=Activity::users(60)->groupBy('user_id')->count();
 		$active_users= Activity::users(60)->groupBy('user_id')->get();
-		$visits= Visit::with('patient')->orderBy('id','desc')->take(10)->get();
-		return view('home',compact('d_active','role_name','patients_count','inpatient_visits','outpatient_visit_count','loggable_number','active_users','visits'));
+		$visits= Visit::with('patient','medicalunits')->where('cancelled',false)->orderBy('id','desc')->take(10)->get();
+		return view('home',compact('d_active','role_name','patients_count','inpatient_visits','outpatient_clinic_visits','outpatient_desk_visits','loggable_number','active_users','visits'));
+	}
+	/* Get number of inpatients */
+	public function _numberOfInpatients()
+	{
+		$visits=Visit::join('medical_unit_visit','visits.id','=','medical_unit_visit.visit_id')
+					 ->join('medical_units','medical_units.id','=','medical_unit_visit.medical_unit_id')
+					 ->where('medical_units.type','d')
+					 ->where('visits.closed',0)
+					 ->where('visits.cancelled',0)
+					 ->count();
+		return $visits;
 	}
 	public function indexUser(Request $request){
 		$roles=Role::whereNotIn('id',[1,3])->lists('arabic_name','id');
@@ -726,6 +732,8 @@ class AdminController extends Controller
 	public function report_desk_visits_period(Request $request){
 
 		$today_date=null;
+		$user=User::find(Auth::id());
+		$role_name=$user->role->name;
 		if($request->session()->get('print_data_fromdate'))
 			$header=" بيانات حجز كشف المرضي فى مكاتب الأستقبال خلال الفترة <br> من ".$request->session()->get('print_data_fromdate')." ألى "
 					 .$request->session()->get('print_data_todate');
@@ -757,7 +765,7 @@ class AdminController extends Controller
 		}
 
 
-		return view('reports.visits_today',array('data'=>$visits_user,'table_header'=>$header,'medical_type'=>'c','numberOfVisits'=>$visits_count,'today_date'=>$today_date));
+		return view('reports.visits_today',array('data'=>$visits_user,'table_header'=>$header,'medical_type'=>'c','numberOfVisits'=>$visits_count,'today_date'=>$today_date,'role_name'=>$role_name));
 	}
 
 
@@ -1169,14 +1177,405 @@ class AdminController extends Controller
 		return view('reports.medicines',array('data'=>$data,'table_header'=>$header));
 	}
 
+	/* Medical reports actions */
 
+	public function medical_report_clinics_view(){
+		$this->flash_report_sessions();
+		$r11_active='active';
+		$title="تقرير طبي لمرضي عيادات خارجية";
+		return view('medical_reports.clinics_view',compact('r11_active','title'));
+	}
+
+	public function medical_report_clinics_results(MedicalReportsRequest $request){
+
+		$title="تقرير طبي لمرضي عيادات خارجية";
+		$header=$title;
+		$r11_active='active';
+		$input=$request->all();
+		if($input['submit'] == "reload"){
+			return redirect()->action('AdminController@medical_report_clinics_view');
+		}
+		$header.= $this->_getMedicalReportHeader($input);
+		$data=$this->_getPatientVisits($input,'c','c');
+		$this->_setMedicalReportSession($input);
+		
+		return view('medical_reports.clinics_view',compact('r11_active','data','header','title'));
+	}
+
+	public function medical_report_clinics_print($vid){
+		$title="تقرير طبي لمرضي عيادات خارجية";
+		$table_header=$title;
+		$input=$this->_getMedicalReportSession();
+		$data=$this->_getPatientVisitReport($input,'c',$vid);
+		return view('medical_reports.report',compact('data','table_header'));
+	}
+
+	public function medical_report_deskclinics_view(){
+		$this->flash_report_sessions();
+		$r11_active='active';
+		if(request()->is('admin/medicalreports/gdesk')){
+			$title="تقرير طبي لمرضي استقبال عام ";
+			$desk_type='g';
+		}
+		else{
+			$title="تقرير طبي لمرضي استقبال اصابات ";
+			$desk_type='t';
+		}
+		return view('medical_reports.clinics_view',compact('r11_active','title','desk_type'));
+	}
+
+	public function medical_report_deskclinics_results(MedicalReportsRequest $request){
+		if(request()->is('admin/medicalreports/gdesk')){
+			$title="تقرير طبي لمرضي استقبال عام ";
+			$desk_type='g';
+		}
+		else{
+			$title="تقرير طبي لمرضي استقبال اصابات ";
+			$desk_type='t';
+		}
+		$header=$title;
+		$r11_active='active';
+		$input=$request->all();
+		if($input['submit'] == "reload"){
+			if($desk_type == 'g')
+				return redirect()->route('gdesk');
+			else
+				return redirect()->route('tdesk');
+		}
+		$header.= $this->_getMedicalReportHeader($input);
+		$data=$this->_getPatientVisits($input,'c',strtoupper($desk_type));
+		$this->_setMedicalReportSession($input);
+		
+		return view('medical_reports.clinics_view',compact('r11_active','data','header','title','desk_type'));
+	}
+
+	public function medical_report_deskclinics_print($vid){
+		if(request()->is('admin/medicalreports/gdesk/*')){
+			$title="تقرير طبي لمرضي استقبال عام ";
+			$desk_type='g';
+		}
+		else{
+			$title="تقرير طبي لمرضي استقبال اصابات ";
+			$desk_type='t';
+		}
+		$table_header=$title;
+		$input=$this->_getMedicalReportSession();
+		$data=$this->_getPatientVisitReport($input,strtoupper($desk_type),$vid);
+		return view('medical_reports.report',compact('data','table_header'));
+	}
+
+	public function medical_report_entry_clinics_view(){
+		$this->flash_report_sessions();
+		$r11_active='active';
+		$title="تقرير طبي لمرضي الأقسام الداخلية عيادات خارجية";
+		$department_flag=true;
+		return view('medical_reports.clinics_view',compact('r11_active','title','department_flag'));
+	}
+	public function medical_report_entry_clinics_results(MedicalReportsRequest $request){
+		
+		$title="تقرير طبي لمرضي الأقسام الداخلية عيادات خارجية";
+		$header=$title;
+		$r11_active='active';
+		$department_flag=true;
+		$input=$request->all();
+		if($input['submit'] == "reload"){
+			return redirect()->action('AdminController@medical_report_entry_clinics_view');
+		}
+		$header.= $this->_getMedicalReportHeader($input);
+		$data=$this->_getPatientVisits($input,'d','c');
+		$this->_setMedicalReportSession($input);
+		
+		return view('medical_reports.clinics_view',compact('r11_active','data','header','title','department_flag'));
+	}
+	public function medical_entry_report_clinics_print($vid){
+		$title="تقرير طبي لمرضي الأقسام الداخلية عيادات خارجية";
+		$table_header=$title;
+		$department_flag=true;
+		$input=$this->_getMedicalReportSession();
+		$data=$this->_getPatientVisitReport($input,'d',$vid);
+		return view('medical_reports.report',compact('data','table_header','department_flag'));
+	}
+	
+	public function medical_report_entry_deskclinics_view(){
+		$this->flash_report_sessions();
+		$r11_active='active';
+		if(request()->is('admin/medicalreports/entry_gdesk')){
+			$title="تقرير طبي لمرضي الأقسام الداخلية استقبال عام ";
+			$desk_type='g';
+		}
+		else{
+			$title="تقرير طبي لمرضي الأقسام الداخلية استقبال اصابات ";
+			$desk_type='t';
+		}
+		$department_flag=true;
+		return view('medical_reports.clinics_view',compact('r11_active','title','department_flag','desk_type'));
+	}
+	public function medical_report_entry_deskclinics_results(MedicalReportsRequest $request){
+		
+		if(request()->is('admin/medicalreports/entry_gdesk')){
+			$title="تقرير طبي لمرضي الأقسام الداخلية استقبال عام ";
+			$desk_type='g';
+		}
+		else{
+			$title="تقرير طبي لمرضي الأقسام الداخلية استقبال اصابات ";
+			$desk_type='t';
+		}
+		$header=$title;
+		$r11_active='active';
+		$department_flag=true;
+		$input=$request->all();
+		if($input['submit'] == "reload"){
+			if($desk_type == 'g')
+				return redirect()->route('entry_gdesk');
+			else
+				return redirect()->route('entry_tdesk');
+		}
+		$header.= $this->_getMedicalReportHeader($input);
+		$data=$this->_getPatientVisits($input,'d',strtoupper($desk_type));
+		$this->_setMedicalReportSession($input);
+		
+		return view('medical_reports.clinics_view',compact('r11_active','data','header','title','desk_type','department_flag'));
+	}
+	public function medical_entry_report_deskclinics_print($vid){
+		if(request()->is('admin/medicalreports/entry_gdesk/*')){
+			$title="تقرير طبي لمرضي الأقسام الداخلية استقبال عام ";
+			$desk_type='g';
+		}
+		else{
+			$title="تقرير طبي لمرضي الأقسام الداخلية استقبال اصابات ";
+			$desk_type='t';
+		}
+		$table_header=$title;
+		$department_flag=true;
+		$input=$this->_getMedicalReportSession();
+		$data=$this->_getPatientVisitReport($input,'d',$vid);
+		return view('medical_reports.report',compact('data','table_header','department_flag'));
+	}
+
+	public function convertPatientToEntry($pid,$vid,$cid)
+	{
+		$patient_visits=Patient::find($pid)
+								->visits()
+								->join('medical_unit_visit','medical_unit_visit.visit_id','=','visits.id')
+								->join('medical_units','medical_units.id','=','medical_unit_visit.medical_unit_id')
+								->where('type','c')
+								->whereDate('visits.created_at','=',date('Y-m-d',time()))
+								->where('closed',false)
+								->where('cancelled',false)
+								->select('visits.id')
+								->get();
+		DB::beginTransaction();
+		try{
+			if(count($patient_visits) > 0){
+				foreach($patient_visits as $row){
+					if($row->id != $vid){
+						$visit=Visit::find($row->id);
+						$visit->closed=true;
+						$visit->save();
+					}
+				}
+			}
+			$visit=Visit::find($vid);
+			$fromClinic=MedicalUnit::find($cid);
+			$toDepartment=$fromClinic->parent_department_id;
+
+			$medicalunitvisit=$fromClinic->visits()->updateExistingPivot($vid,array('convert_to'=>$toDepartment,'department_conversion'=>true));
+			$visit->medicalunits()->attach(array($toDepartment=>array('user_id'=>Auth::id())));
+			request()->session()->flash('flash_message', "تم التحويل بالنجاح");
+			DB::commit();
+		}
+		catch(\Exception $e){
+			request()->session()->flash('flash_message', "حدثت مشكلة حاول مرة اخري");
+			request()->session()->flash('message_type', "false");
+			DB::rollBack();
+		}
+		return redirect()->action('AdminController@index');
+	}
+
+	private function _getMedicalReportHeader($input){
+		$header="";
+		switch($input['date_selection']){
+			case 'today':
+			case 'yestarday':
+				$header.=" فى تاريخ ";
+				break;
+			case 'last_week':
+			case 'date_selected':
+				$header.=" خلال الفترة من ";
+				break;
+		}
+		switch($input['date_selection']){
+			case 'today':
+				$header.=Carbon::today()->format('Y-m-d');
+				break;
+			case 'yestarday':
+				$header.=Carbon::yestarday()->format('Y-m-d');
+				break;
+			case 'last_week':
+				$header.=Carbon::now()->subWeek()->format('Y-m-d')." الي ".Carbon::now()->format('Y-m-d');
+				break;
+			case 'date_selected':
+				$header.=$input['duration_from']." الي ".$input['duration_to'];
+				break;
+		}
+		return $header;
+	}
+	private function _setMedicalReportSession($input){
+		if(array_key_exists('duration_from',$input)){
+			Session::put('print_from_date',$input['duration_from']);
+			Session::put('print_to_date',$input['duration_to']);
+		}
+		Session::put('print_date_selection',$input['date_selection']);
+		if(isset($input['ticket_number']))
+			Session::put('print_ticket_number',$input['ticket_number']);
+		Session::put('print_name',$input['name']);
+		Session::put('print_id',$input['id']);
+	}
+	private function _getMedicalReportSession(){
+		return array(
+			'date_selection'=>Session::get('print_date_selection'),
+			'duration_from'=>Session::get('print_from_date'),
+			'duration_to'=>Session::get('print_from_to'),
+			'ticket_number'=>Session::get('print_ticket_number'),
+			'name'=>Session::get('print_name'),
+			'id'=>Session::get('print_id'),
+		);
+	}
+	/* get patient visits with limited attrs */
+	private function _getPatientVisits($input,$category,$ticket_type,$visit_id=''){
+		
+		return  Visit::join('patients','patient_id','=','patients.id')
+					  ->join('medical_unit_visit','medical_unit_visit.visit_id','=','visits.id')
+					  ->join('medical_units','medical_units.id','=','medical_unit_visit.medical_unit_id')
+					  ->where(function($query) use($input){
+							switch ($input['date_selection']) {
+								case 'today':
+									$query->whereDate('visits.created_at','=',Carbon::now()->format('Y-m-d'));
+									break;
+								case 'yestarday':
+									$query->whereDate('visits.created_at','=',Carbon::yesterday()->format('Y-m-d'));
+									break;
+								case 'last_week':
+									$query->whereBetween('visits.created_at',[Carbon::now()->subWeek()->format('Y-m-d'),Carbon::now()->format('Y-m-d')]);
+									break;
+								case 'date_selected':
+									if($input['duration_from']!="" && $input['duration_to'] !="")
+										$query->whereBetween('visits.created_at',[$input['duration_from'],$input['duration_to']]);
+									break;
+								default:
+									# code...
+									break;
+							}
+					  })
+					  ->where(function($query) use($input,$category,$ticket_type,$visit_id){
+						  if($input['id'] != ""){
+							$query->where('patients.id',$input['id']);
+						  }
+						  if($input['name'] != ""){
+							$query->where('patients.name','like','%'.$input['name'].'%');
+						  }
+						  if($visit_id != ""){
+							$query->where('visits.id',$visit_id);
+						  }
+						  $query->where('medical_units.type',$category);
+						  if($category == 'c'){
+							if($input['ticket_number'] != ""){
+								$query->where('ticket_number',$input['ticket_number']);
+							}
+							$query->where(DB::raw('(select count(*) from medical_units join 
+							medical_unit_visit on medical_units.id=medical_unit_visit.medical_unit_id
+							where medical_unit_visit.visit_id=visits.id and medical_units.`type`="d" )'),0);
+							$query->whereNull('medical_unit_visit.convert_to');
+						  }
+						  else{
+							$query->whereIn(DB::raw('(select medical_units.`type` from  medical_units join 
+							medical_unit_visit on medical_units.id=medical_unit_visit.medical_unit_id
+							where medical_unit_visit.visit_id=visits.id order by medical_unit_visit.visit_id asc limit 1)'),['c','d']);
+						  }
+						 
+						  if($ticket_type != 'c'){
+								$query->where('ticket_type',$ticket_type);
+						  }
+						  else{
+								$query->whereNull('ticket_type');
+						  }
+						  
+					  })
+					  
+					  ->select('patients.id as pid','ticket_number','visits.created_at','patients.name','gender',
+							   'birthdate','medical_units.name as category_name','visits.id','entry_date','entry_time')
+					  ->orderBy('visits.id','desc')
+					  ->get();
+	}
+	/* get patient visit completely for printing */
+	private function _getPatientVisitReport($input,$category,$visit_id=''){
+		
+		return  Visit::join('patients','patient_id','=','patients.id')
+					  ->join('medical_unit_visit','medical_unit_visit.visit_id','=','visits.id')
+					  ->join('medical_units','medical_units.id','=','medical_unit_visit.medical_unit_id')
+					  ->leftJoin('visit_diagnoses','visit_diagnoses.visit_id','=','visits.id')
+					  ->where(function($query) use($input){
+							switch ($input['date_selection']) {
+								case 'today':
+									$query->whereDate('visits.created_at','=',Carbon::now()->format('Y-m-d'));
+									break;
+								case 'yestarday':
+									$query->whereDate('visits.created_at','=',Carbon::yesterday()->format('Y-m-d'));
+									break;
+								case 'last_week':
+									$query->whereBetween('visits.created_at',[Carbon::now()->subWeek()->format('Y-m-d'),Carbon::now()->format('Y-m-d')]);
+									break;
+								case 'date_selected':
+									if($input['duration_from']!="" && $input['duration_to'] !="")
+										$query->whereBetween('visits.created_at',[$input['duration_from'],$input['duration_to']]);
+									break;
+
+							}
+					  })
+					  ->where(function($query) use($input,$category,$visit_id){
+						if($category != 'd'){
+						  if($input['ticket_number'] != ""){
+							  $query->where('ticket_number',$input['ticket_number']);
+						  }
+						  if($category != 'c'){
+							  $query->where('ticket_type',$category);
+						  }
+						}
+						if($input['id'] != ""){
+						  $query->where('patients.id',$input['id']);
+						}
+						if($input['name'] != ""){
+						  $query->where('patients.name','like','%'.$input['name'].'%');
+						}
+						if($visit_id != ""){
+						  $query->where('visits.id',$visit_id);
+						}
+						if($category!='d'){
+							$query->where('medical_units.type','c');
+							$query->whereNull('medical_unit_visit.convert_to');
+						}
+						  
+						else
+						  $query->where('medical_units.type',$category);
+					  })
+					  ->select('ticket_number','visits.created_at','patients.name','gender',
+							   'birthdate','medical_units.name as clinic_name','visits.id',
+							   DB::raw('( select group_concat(content) from visit_diagnoses where visit_id=visits.id) as diagnoses ')
+							   ,'patients.job as p_job','entry_date','entry_time','doctor_recommendation','exit_date')
+					  ->get();
+	}
 	public function editPatient($pid,$vid){
 
-		$patient_data=Patient::find($pid);
-		if($vid!=-1)
-			$visit=Visit::find($vid);
-		else
+		if($vid!=-1){
+			$visit=Visit::with('patient')
+						->where('id',$vid)
+						->get();
+			$patient_data=null;
+		}
+		else{
+			$patient_data=Patient::find($pid);
 			$visit=null;
+		}
 		$ages=array();
 		$days = array();
 		$ages[""]=0;
@@ -1197,6 +1596,8 @@ class AdminController extends Controller
 			'ticket_number.required' => 'هذا الحقل مطلوب الأدخال.',
 			'ticket_number.numeric' => 'حقل رقم التذكرة يجب أن يكون رقم فقط .',
 			'ticket_number.unique' => 'رقم التذكرة موجود من قبل .',
+			'serial_number.required' => 'هذا الحقل مطلوب الأدخال.',
+			'reg_date.required' => 'هذا الحقل مطلوب الأدخال.',
 			'fname.required' => 'هؤلاء الحقول مطلوب الأدخال بشكل كامل.',
 			'fname.min' => 'حقل الأسم الأول يجب الأ يقل عن :min حروف',
 			'fname.max' => 'حقل الأسم الأول يجب الأ يتعدي :max حرف',
@@ -1214,31 +1615,37 @@ class AdminController extends Controller
 			'lname.alpha' =>'حقل الأسم الرابع أن يكون حروف فقط بدون وجود مسافات.',
 			'gender.required' => 'هذا الحقل مطلوب الأدخال.',
 			'address.required' => 'هذا الحقل مطلوب الأدخال.',
-			'sid.size' => 'حقل رقم البطاقة يجب أن يكون مكون من :size رقم.',
+			'job.required' => 'هذا الحقل مطلوب الأدخال.',
+			'sid.sin_format' => 'رقم البطاقة غير صحيح.',
 			'sid.unique' => 'رقم البطاقة موجود من قبل.',
 			'year_age.numeric' => 'حقل عدد السنين يجب ان يكون رقم فقط.',
 			'year_age.required_without_all' => 'حقل عدد السنين يجب أن يكون أكبر من 0 فى حالة عدم وجود عدد أيام أو عدد أشهر',
-
+			'sent_by_person.required' => 'هذا الحقل مطلوب الأدخال.',
+			'ticket_companion_name.required_with' => 'هذا الحقل مطلوب فى حال وجود رقم البطاقة',
+			'ticket_companion_sin.sin_format' => 'رقم البطاقة غير صحيح.',
+			'ticket_companion_sin.different' => 'رقم البطاقة يجب ان يكون مختلف عن رقم بطاقة المريض',
+			
 		];
 		if(isset($input['ticket_number']))
 		{
-			$constraints['ticket_number']="required|numeric";
-			if($input['ticket_type']==""){
-				$clinic_ticket=Visit::where('ticket_number',$input['ticket_number'])
-														->whereNull('ticket_type')
-														->where('id','<>',$vid)
-														->first();
-				if(count($clinic_ticket) > 0){
-						return redirect()->back()->withErrors(['ticket_number'=>'رقم التذكرة موجود من قبل .'])->withInput();
+			if($input['ticket_status'] == "T"){
+				if($input['ticket_type']==""){
+					$clinic_ticket=Visit::where('ticket_number',$input['ticket_number'])
+															->whereNull('ticket_type')
+															->where('id','<>',$vid)
+															->first();
+					if(count($clinic_ticket) > 0){
+							return redirect()->back()->withErrors(['ticket_number'=>'رقم التذكرة موجود من قبل .'])->withInput();
+					}
 				}
-			}
-			else{
-				$desk_ticket=Visit::where('ticket_number',$input['ticket_number'])
-														->whereNotNull('ticket_type')
-														->where('id','<>',$vid)
-														->first();
-				if(count($desk_ticket) > 0){
-						return redirect()->back()->withErrors(['ticket_number'=>'رقم التذكرة موجود من قبل .'])->withInput();
+				else{
+					$desk_ticket=Visit::where('ticket_number',$input['ticket_number'])
+															->whereNotNull('ticket_type')
+															->where('id','<>',$vid)
+															->first();
+					if(count($desk_ticket) > 0){
+							return redirect()->back()->withErrors(['ticket_number'=>'رقم التذكرة موجود من قبل .'])->withInput();
+					}
 				}
 			}
 		}
@@ -1249,85 +1656,77 @@ class AdminController extends Controller
 		$constraints['lname' ] = 'alpha|min:2|max:20';
 		$constraints['gender'] = 'required';
 		$constraints['address'] ='required';
-		$constraints['sid' ] = 'size:14|unique:patients,sid,'.$pid;
+		$constraints['sid'] = 'sin_format|unique:patients,sid,'.$pid;
 		$constraints['year_age' ] = 'numeric|required_without_all:month_age,day_age';
+		if(isset($input['ticket_number']) && $input['ticket_type']!=""){
+			$constraints['serial_number'] ='required';
+			$constraints['reg_date'] ='required';
+			$constraints['job'] ='required';
+			$constraints['sent_by_person']='required';
+			$constraints['ticket_companion_name']='required_with:ticket_companion_sin';
+			$constraints['ticket_companion_sin']='sin_format|different:sid';
+		}
+		
 
 		$this->validate($request, $constraints ,$messages);
 		$input['name']=$input['fname']." ".$input['sname']." ".$input['mname']." ".$input['lname'];
 		unset($input['fname']);unset($input['sname']);unset($input['mname']);unset($input['lname']);
-		if($input['sid'] != ""){
-			if($input['sid'][0] == 2)
-				$prifx_year="19";
-			else if($input['sid'][0] == 3)
-				$prifx_year="20";
-			else if($input['sid'][0] == 4)
-				$prifx_year="21";
-
-			$year=$prifx_year."".$input['sid'][1]."".$input['sid'][2];
-			$month=$input['sid'][3]."".$input['sid'][4];
-			$day=$input['sid'][5]."".$input['sid'][6];
-			$birthdate=$year."-".$month."-".$day;
-			$arr['sid']=$birthdate;
-			$messages = [
-				'sid.date' => 'الرقم القومي غير صحيح'
-			];
-			$validator = Validator::make($arr, [
-					'sid' => 'date',
-			],$messages);
-
-			if ($validator->fails()) {
-					return redirect()->back()
-													 ->withErrors($validator)
-													 ->withInput();
+		if($input['sid']!="")
+			$birthdate=return_birthdate($input['sid']);
+		else
+			$birthdate=return_birtdate($input['day_age'],$input['month_age'],$input['year_age']);
+		
+		DB::beginTransaction();
+		try{
+			$patient=Patient::find($pid);
+			$patient->sid=$input['sid']==""?null:$input['sid'];
+			$patient->name=$input['name'];
+			$patient->gender=$input['gender'];
+			$patient->address=$input['address'];
+			$patient->birthdate=$birthdate;
+			$patient->age=$input['year_age'];
+			$patient->save();
+			if(isset($input['ticket_number'])){
+				if($input['ticket_type']!=""){
+					$visit_date['ticket_number']=$input['ticket_status'] == "T"?$input['ticket_number']:"مجاني";
+					$visit_date['serial_number']=$input['serial_number'];
+					$visit_date['ticket_status']=$input['ticket_status'];
+					$visit_date['ticket_type']=$input['ticket_type'];
+					$visit_date['registration_datetime']=Carbon::parse($input['reg_date']." ".$input['reg_time']);
+					$visit_date['watching_status']=$input['watching_status']==""?null:$input['watching_status'];
+					$visit_date['sent_by_person']=$input['sent_by_person'];
+					$visit_date['ticket_companion_name']=$input['ticket_companion_name']==""?null:$input['ticket_companion_name'];
+					$visit_date['ticket_companion_sin']=$input['ticket_companion_sin']==""?null:$input['ticket_companion_sin'];
+				}
+				else{
+					$visit_date['ticket_number']=$input['ticket_number'];
+				}
+				Visit::find($vid)->update($visit_date);
 			}
-			DB::beginTransaction();
-			try{
-				$patient=Patient::find($pid);
-				$patient->sid=$input['sid'];
-				$patient->name=$input['name'];
-				$patient->gender=$input['gender'];
-				$patient->address=$input['address'];
-				$patient->birthdate=$birthdate;
-				$patient->age=$input['year_age'];
-				$patient->save();
-				if(isset($input['ticket_number']))
-					Visit::find($vid)->update(['ticket_number'=>$input['ticket_number']]);
-				DB::commit();
-			}
-			catch(\Exception $e){
-				DB::rollBack();
-			}
-
+				
+			DB::commit();
 		}
-		else{
-			$birthdate=strtotime("-".($input['day_age']==""?0:$input['day_age'])." day",time());
-			$birthdate=strtotime("-".($input['month_age']==""?0:$input['month_age'])." month",$birthdate);
-			$birthdate=strtotime("-".($input['year_age']==""?0:$input['year_age'])." year",$birthdate);
-
-			$birthdate=date('Y-m-d',$birthdate);
-
-			DB::beginTransaction();
-			try{
-				$patient=Patient::find($pid);
-				$patient->name=$input['name'];
-				$patient->gender=$input['gender'];
-				$patient->address=$input['address'];
-				$patient->birthdate=$birthdate;
-				$patient->age=$input['year_age'];
-				$patient->save();
-				if(isset($input['ticket_number']))
-					Visit::find($vid)->update(['ticket_number'=>$input['ticket_number']]);
-				DB::commit();
-			}
-			catch(\Exception $e){
-				DB::rollBack();
-			}
-
+		catch(\Exception $e){
+			DB::rollBack();
 		}
+
+		
 		$request->session()->flash('success','تم التعديل بنجاح');
 		return redirect()->back();
 	}
 
+	public function showPatientVisit($vid){
+		
+		if($vid=="")
+			return redirect()->action('AdminController@index');
+		$visit=Visit::with('patient','entrypoint','medicalunits','user')
+					->where('id',$vid)
+					->get();
+		$s_active='active';
+		$title="تفاصيل تذكرة مريض";
+		return view('show_ticket_details',compact('title','visit','s_active'));
+
+	}
 	public function searchTicketNumber()
 	{
 			$visits= Visit::with('patient')->where('visits.ticket_number',request()->ticket_number)->get();
@@ -1341,6 +1740,13 @@ class AdminController extends Controller
 			Session::forget('print_data_fromdate');
 			Session::forget('print_data_todate');
 			Session::forget('print_determined_date');
+			Session::forget('duration_from');
+			Session::forget('print_from_date');
+			Session::forget('print_to_date');
+			Session::forget('print_date_selection');
+			Session::forget('print_ticket_number');
+			Session::forget('print_name');
+			Session::forget('print_id');
 		}
 	}
 	public function report_total_inpatients_period_view()
@@ -1549,7 +1955,8 @@ class AdminController extends Controller
 								  ->orWhere('department_conversion',1);
 						})
 
-					  ->select(DB::raw(" (select name from users where users.id=visits.user_id) as user_name "),'patients.id','patients.name','visits.ticket_number','ticket_type','patients.gender','patients.address','patients.birthdate','patients.sid','medical_units.name as dept_name','visits.created_at')
+					  ->select(DB::raw(" (select name from users where users.id=visits.user_id) as user_name "),'patients.id','patients.name','visits.ticket_number','ticket_type','patients.gender','patients.address','patients.birthdate','patients.sid','medical_units.name as dept_name','visits.created_at','visits.serial_number','visits.registration_datetime')
+					  ->orderBy('visits.registration_datetime','asc') 
 					  ->orderBy('visits.created_at','asc')
 					  ->get();
 	}
@@ -1679,6 +2086,9 @@ class AdminController extends Controller
 					  ->orderBy('visits.created_at','asc')
 					  ->get();
 	}
+
+
+
 	public function make_backup(){
 		$exitCode = Artisan::call('db:backup');
 		return response()->download(Session::get('backup_file'));

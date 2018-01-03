@@ -68,7 +68,7 @@
 					@endif
 					<div class="row">
 						<div class="col-lg-12">
-							<table id="example1" class="table table-bordered table-hover">
+							<table id="visits_datatable" class="table table-bordered table-hover">
 								<thead>
 								<tr>
 									@if($role_name != 'Entrypoint')
@@ -135,6 +135,8 @@
 												@endif
 										</td>
 										<td>{{$row->entry_date}}</td>
+									@elseif($role_name=="Desk")
+										<td>{{$row->registration_datetime}}</td>
 									@else
 										<td>{{$row->created_at}}</td>
 									@endif

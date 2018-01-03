@@ -165,7 +165,9 @@ return [
 		Fish\Logger\LoggerServiceProvider::class,
 		Witty\LaravelDbBackup\DBBackupServiceProvider::class,
 		App\Providers\BindUserDataServiceProvider::class,
-		Kim\Activity\ActivityServiceProvider::class
+        Kim\Activity\ActivityServiceProvider::class,
+        App\Providers\SINValidationRuleServiceProvider::class,
+        Maherelgamil\Arabicdatetime\ArabicdatetimeServiceProvider::class,
     ],
 
     /*
@@ -212,7 +214,8 @@ return [
         'Validator' => Illuminate\Support\Facades\Validator::class,
         'View' => Illuminate\Support\Facades\View::class,
 		'Form' => Collective\Html\FormFacade::class,
-		'Activity' => Kim\Activity\ActivityFacade::class
+        'Activity' => Kim\Activity\ActivityFacade::class,
+        'Arabicdatetime'    => Maherelgamil\Arabicdatetime\Facades\Arabicdatetime::class,
 
     ],
 

@@ -98,8 +98,10 @@ Route::group(['middleware' => ['auth','admin']], function () {
 	Route::get('admin/delete_entry_user/{user_id}&{entry_id}','AdminController@detachEmployeeToEntrypoint');
 	Route::get('admin/{pid}&{vid}/edit','AdminController@editPatient');
 	Route::patch('admin/update/{pid}&{vid}','AdminController@updatePatient');
+	Route::get('admin/show/{vid}','AdminController@showPatientVisit');
 	Route::get('admin/show','PatientController@show');
 	Route::post('admin/show','PatientController@search');
+	Route::get('admin/{pid}&{vid}&{cid}/converttoentry','AdminController@convertPatientToEntry');
 
 
 
@@ -141,6 +143,32 @@ Route::group(['middleware' => ['auth','admin']], function () {
 	Route::post('admin/print_medicines','AdminController@report_print_medicines_results');
 	Route::get('admin/print_medicines_paper','AdminController@print_medicines_results');
 
+	/* Medical Reports */
+	Route::get('admin/medicalreports/clinics','AdminController@medical_report_clinics_view');
+	Route::post('admin/medicalreports/clinics','AdminController@medical_report_clinics_results');
+	Route::get('admin/medicalreports/clinics/{vid}/print','AdminController@medical_report_clinics_print');
+
+	Route::get('admin/medicalreports/entry_clinics','AdminController@medical_report_entry_clinics_view');
+	Route::post('admin/medicalreports/entry_clinics','AdminController@medical_report_entry_clinics_results');
+	Route::get('admin/medicalreports/entry_clinics/{vid}/print','AdminController@medical_entry_report_clinics_print');
+
+	Route::get('admin/medicalreports/gdesk','AdminController@medical_report_deskclinics_view')->name('gdesk');
+	Route::post('admin/medicalreports/gdesk','AdminController@medical_report_deskclinics_results');
+	Route::get('admin/medicalreports/gdesk/{vid}/print','AdminController@medical_report_deskclinics_print');
+
+	Route::get('admin/medicalreports/tdesk','AdminController@medical_report_deskclinics_view')->name('tdesk');
+	Route::post('admin/medicalreports/tdesk','AdminController@medical_report_deskclinics_results');
+	Route::get('admin/medicalreports/tdesk/{vid}/print','AdminController@medical_report_deskclinics_print');
+
+	Route::get('admin/medicalreports/entry_gdesk','AdminController@medical_report_entry_deskclinics_view')->name('entry_gdesk');
+	Route::post('admin/medicalreports/entry_gdesk','AdminController@medical_report_entry_deskclinics_results');
+	Route::get('admin/medicalreports/entry_gdesk/{vid}/print','AdminController@medical_entry_report_deskclinics_print');
+
+	Route::get('admin/medicalreports/entry_tdesk','AdminController@medical_report_entry_deskclinics_view')->name('entry_tdesk');
+	Route::post('admin/medicalreports/entry_tdesk','AdminController@medical_report_entry_deskclinics_results');
+	Route::get('admin/medicalreports/entry_tdesk/{vid}/print','AdminController@medical_entry_report_deskclinics_print');
+
+	
 	Route::get('admin/backup','AdminController@make_backup');
 	Route::post('admin/restore','AdminController@restore_file');
 

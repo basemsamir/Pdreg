@@ -15,7 +15,7 @@ class MedicalUnit extends Model
 	];
 	public function visits(){
 	
-		return $this->belongsToMany('App\Visit')->withTimestamps();
+		return $this->belongsToMany('App\Visit')->withPivot('convert_to', 'department_conversion')->withTimestamps();
 	}
 	public function users(){
 	

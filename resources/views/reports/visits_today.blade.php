@@ -24,71 +24,63 @@
 		@endif
     <table class="table table-striped table-bordered " style="direction: rtl;" >
   	    <tr>
+        @if(isset($role_name) && ($role_name == "Desk" || $role_name=="SubAdmin" || $role_name=="Admin"))
+          <th>رقم التسلسل</th>
+        @endif
           @if($medical_type =='c')
             <th>رقم التذكرة</th>
           @endif
-		 @if(isset($role_name) && $role_name =='Desk')
+		    @if(isset($role_name) && ($role_name == "Desk" || $role_name=="SubAdmin"|| $role_name=="Admin"))
             <th>نوع التذكرة</th>
           @endif
+        @if(isset($role_name) && !($role_name == "Desk" || $role_name=="SubAdmin"|| $role_name=="Admin"))
       		<th>كود المريض</th>
-      		<th>أسم المريض</th>
+        @endif
+        @if(isset($role_name) && ($role_name == "Desk" || $role_name=="SubAdmin"|| $role_name=="Admin"))
+          <th>التاريخ و الوقت</th>
+        @endif
+          <th>أسم المريض</th>
       		<th>النوع</th>
       		<th>العمر</th>
+         @if(isset($role_name) && !($role_name == "Desk" || $role_name=="SubAdmin"|| $role_name=="Admin"))
           <th>العنوان</th>
+         @endif
       		<th>{{ $medical_type =='c'?'أسم العيادة':'أسم القسم' }}</th>
           @if(!isset($today_date))
       		  <th>{{ $medical_type =='c'?' تاريخ الحجز':'تاريخ الدخول' }}</th>
           @endif
-		  @if(isset($role_name) && $role_name == "Desk")
+		    @if(isset($role_name) && ($role_name == "Desk" || $role_name=="SubAdmin"|| $role_name=="Admin"))
 			  <th>ملاحظات</th>
 	      @endif
       	</tr>
       	@foreach($visits_row as $row)
       	<tr>
+          @if(isset($role_name) && ($role_name == "Desk" || $role_name=="SubAdmin"|| $role_name=="Admin"))
+             <td>{{$row->serial_number}}</td>
+          @endif
           @if($medical_type =='c')
             <td>{{$row->ticket_number}}</td>
           @endif
-		  @if(isset($role_name) && $role_name =='Desk')
+		      @if(isset($role_name) && ($role_name == "Desk" || $role_name=="SubAdmin"|| $role_name=="Admin"))
             <td>{{$row->ticket_type!=null?($row->ticket_type=="G"?'استقبال عام':'استقبال اصابات'):""}}</td>
           @endif
-      		<td>{{$row->id}}</td>
+          @if(isset($role_name) && !($role_name == "Desk" || $role_name=="SubAdmin"|| $role_name=="Admin"))
+      		  <td>{{$row->id}}</td>
+          @endif
+          @if(isset($role_name) && ($role_name == "Desk" || $role_name=="SubAdmin"|| $role_name=="Admin"))
+            <td>{{$row->registration_datetime}}</td>
+          @endif
       		<td>{{$row->name}}</td>
       		<td>{{$row->gender=='M'?'ذكر':'أنثى'}}</td>
-      		<td>
-            <?php
-                $current_date = new DateTime();
-                $birthdate = new DateTime($row->birthdate);
-                $interval = $current_date->diff($birthdate);
-            ?>
-            @if($interval->y > 0)
-              {{ $interval->y }}
-              @if( $interval->y > 11 )
-                {{ "سنة" }}
-              @else
-                {{ "سنوات" }}
-              @endif
-            @elseif($interval->m > 0)
-              {{ $interval->m }}
-              @if( $interval->m > 11 )
-                {{ "شهر" }}
-              @else
-                {{ "شهور" }}
-              @endif
-            @else
-              {{ $interval->d." يوم " }}
-              @if( $interval->d > 11 )
-                {{ "يوم" }}
-              @else
-                {{ "أيام" }}
-              @endif
-            @endif
-          </td>
-          <td>{{$row->address}}</td>
+      		<td> {{ calculateAge($row->birthdate) }}</td>
+          @if(isset($role_name) && !($role_name == "Desk" || $role_name=="SubAdmin"|| $role_name=="Admin"))
+            <td>{{$row->address}}</td>
+          @endif
       		<td>{{$row->dept_name}}</td>
           @if(!isset($today_date))
       		  <td>{{date($row->created_at->format('Y-m-d'))}}</td>
           @endif
-		   @if(isset($role_name) && $role_name == "Desk")
+		   @if(isset($role_name) && ($role_name == "Desk" || $role_name=="SubAdmin"|| $role_name=="Admin"))
 			  <th>@if($row->ticket_type=="") تم التحويل من مكتب حجز التذاكر @endif</th>
 	      @endif
       	</tr>

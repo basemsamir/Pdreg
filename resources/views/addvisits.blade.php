@@ -258,6 +258,15 @@
 							  @endif
 							  @if ($errors->has('file_number'))<span class="help-block">{{$errors->first('file_number')}}</span>@endif
 						  </div>
+							<div class="form-group @if($errors->has('file_type')) has-error @endif">
+									{!! Form::label('file_type','نوع الملف',array('style'=>'color:red')) !!}
+									@if(isset($data[0]->file_type))
+										{!! Form::select('file_type',$file_types,$data[0]->file_type,['class' => 'form-control']); !!}
+								  @else
+										{!! Form::select('file_type',$file_types,'',['class' => 'form-control']); !!}
+									@endif
+									@if ($errors->has('file_type'))<span class="help-block">{{$errors->first('file_type')}}</span>@endif
+							</div>
 						  <div class="form-group @if($errors->has('cure_type_id')) has-error @endif">
 						      {!! Form::label('نوع العلاج') !!}
 							  @if(isset($data[0]->cure_type_id))
@@ -315,6 +324,9 @@ $(document).ajaxComplete(function(){
     $("#overlay").hide();
 });
 $(document).ready(function(){
+	
+	 $("#reference_doctor_id").prepend('<option></option>');
+	 $("#reference_doctor_id").prop('selectedIndex',0);
 
 	 $("#medical_id").change(function(){
 		var url = "{{ url('/patients/getDepartmentDoctors/') }}";
@@ -324,6 +336,8 @@ $(document).ready(function(){
 			data: { 'mid':$("#medical_id").val() },
 			success: function (data) {
 				$("#reference_doctor_id").empty();
+				$("#reference_doctor_id").prepend('<option></option>');
+				$("#reference_doctor_id").prop('selectedIndex',0);
 				if(data['success']=='true'){
 
 					for (i=0;i<data['data'].length;i++) {

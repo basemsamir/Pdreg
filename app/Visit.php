@@ -4,6 +4,7 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Fish\Logger\Logger;
+use Carbon\Carbon;
 
 class Visit extends Model
 {
@@ -11,6 +12,7 @@ class Visit extends Model
     protected $table = 'visits';
 		protected $fillable = [
 			'patient_id',
+			'serial_number',
 			'ticket_number',
 			'ticket_type',
 			'c_name',
@@ -33,7 +35,13 @@ class Visit extends Model
 			'convert_to_entry_id',
 			'convert_to_user_id',
 			'converted_by',
-			'entry_date'
+			'entry_date',
+			'registration_datetime',
+			'watching_status',
+			'ticket_status',
+			'sent_by_person',
+			'ticket_companion_name',
+			'ticket_companion_sin'
 		];
 
 	public function patient(){
@@ -70,9 +78,29 @@ class Visit extends Model
 					 ->whereNotNull('entry_date')->count();
 
 	}
+	/* Get number of outpatients were reserved from clinic reservation office */
+	public function scopeNumberOfOutpatientsFromClinic($query){
+		return $query->where('cancelled',false)
+					 ->whereDate('created_at','=',Carbon::today()->format('Y-m-d'))
+					 ->whereNull('ticket_type')->get();
+	}
+	/* Get number of outpatients were reserved from desk reservation office */
+	public function scopeNumberOfOutpatientsFromDesk($query){
+		return $query->where('cancelled',false)
+					 ->whereDate('created_at','=',Carbon::today()->format('Y-m-d'))
+					 ->whereNotNull('ticket_type')->get();
+	}
+	public function entrypoint(){
+		
+		return $this->belongsTo('App\Entrypoint','entry_id');
+	}
+	public function user(){
+		
+		return $this->belongsTo('App\User');
+	}
 	public function medicalunits(){
 
-		return $this->belongsToMany('App\MedicalUnit')->withTimestamps();
+		return $this->belongsToMany('App\MedicalUnit')->withPivot('convert_to', 'department_conversion')->withTimestamps();
 	}
 	public function orders(){
 

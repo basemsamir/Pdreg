@@ -7,13 +7,14 @@
   <div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
+    <h1>
+        لوحة التحكم
+      </h1>
       <ol class="breadcrumb">
         <li><a href="{{ url('/') }}"><i class="fa fa-dashboard"></i> الصفحة الرئيسية</a></li>
         <li class="active">لوحة التحكم</li>
       </ol>
-	  <h1>
-        لوحة التحكم
-      </h1>
+	 
     </section>
 
     <!-- Main content -->
@@ -33,23 +34,7 @@
       <!-- Small boxes (Stat box) -->
       <div class="row">
 
-
-        <div class="col-lg-3 col-xs-8">
-
-          <div class="small-box bg-green">
-            <div class="inner">
-              <h3>{{$loggable_number}}</h3>
-
-              <p><b>المستخدمين النشطاء</b></p>
-            </div>
-            <div class="icon">
-              <i class="ion ion-ios-people"></i>
-            </div>
-            <!-- <a href="#" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a> -->
-          </div>
-        </div>
-
-		<div class="col-lg-3 col-xs-8">
+		    <div class="col-lg-3 col-sm-24">
 
           <div class="small-box bg-aqua">
             <div class="inner">
@@ -65,7 +50,7 @@
         </div>
 
         <!-- ./col -->
-        <div class="col-lg-3 col-xs-8">
+        <div class="col-lg-3 col-sm-24">
           <!-- small box -->
           <div class="small-box bg-yellow">
             <div class="inner">
@@ -80,11 +65,24 @@
           </div>
         </div>
         <!-- ./col -->
-        <div class="col-lg-3 col-xs-8">
+        <div class="col-lg-3 col-sm-24">
+          <div class="small-box bg-green">
+              <div class="inner">
+                <h3>{{$outpatient_desk_visits}}</h3>
+
+                <p><b>عدد حالات الأستقبال اليوم</b></p>
+              </div>
+              <div class="icon">
+                <i class="ion ion-pie-graph"></i>
+              </div>
+              <!-- <a href="#" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a> -->
+          </div>
+        </div>
+        <div class="col-lg-3 col-sm-24">
           <!-- small box -->
           <div class="small-box bg-red">
             <div class="inner">
-              <h3>{{ $outpatient_visit_count }}</h3>
+              <h3>{{ $outpatient_clinic_visits }}</h3>
               <p><b>عدد حالات العيادات اليوم</b></p>
             </div>
             <div class="icon">
@@ -95,11 +93,12 @@
         </div>
 
         <!-- ./col -->
+        
       </div>
       <!-- /.row -->
 	  <div class="row" dir="rtl">
 
-			<div class="col-lg-6" style="text-align: right">
+			<div class="col-lg-4 col-sm-24" style="text-align: right">
 				<div class="panel panel-default">
 				  <div class="panel-heading"><b>المستخدمين النشطاء</b></div>
 				  <div class="panel-body">
@@ -123,7 +122,7 @@
 				  </div>
 				</div>
 			</div>
-			<div class="col-lg-6"  style="text-align: right">
+			<div class="col-lg-8 col-sm-24"  style="text-align: right">
 				<div class="panel panel-default">
 				  <div class="panel-heading"><b>المرضى الجدد</b></div>
 				  <div class="panel-body">
@@ -139,10 +138,13 @@
 							<thead>
 							<tr>
 							  <th style="text-align:center">رقم التذكرة</th>
+                <th style="text-align:center">مصدر التذكرة</th>
 							  <th style="text-align:center">الكود</th>
 							  <th style="text-align:center">الأسم</th>
-							  <th style="text-align:center">النوع</th>
+                <th style="text-align:center">العيادة</th>
+                <th style="text-align:center">التفاصيل</th>
 							  <th style="text-align:center">تعديل</th>
+                <th style="text-align:center">تحويل الي الداخلي</th>
 							</tr>
 							</thead>
 							<tbody>
@@ -153,11 +155,49 @@
 								@foreach($visits as $row)
 								<tr id="row{{$i}}">
 								  <td>{{$row->ticket_number}}</td>
+                  <td>@if($row->ticket_type==null)
+                      {{'عيادات'}}
+                      @elseif($row->ticket_type=="G")
+                      {{'استقبال عام'}}
+                      @else
+                      {{'استقبال اصابات'}}
+                      @endif
+                  </td>
 								  <td>{{$row->patient->id}} <?php $id=$row->patient->id;$vid=$row->id; ?></td>
 								  <td>{{$row->patient->name}}</td>
-								  <td>{{$row->patient->gender=='M'?'ذكر':'أنثي'}}</td>
+                  <td>
+                    @foreach($row->medicalunits as $medicalunit)
+                      @if($medicalunit->pivot->convert_to == null)
+                        {{$medicalunit->name}}
+                      @endif
+                    @endforeach
+                  </td>
+                  <td align="center"><a href=' {{ url("admin/show/$vid") }} '
+									  class="btn btn-primary" ><i class="fa fa-eye"></i></a></td>
 								  <td align="center"><a href=' {{ url("admin/$id&$vid/edit") }} '
-									  class="btn btn-primary" ><i class="fa fa-edit"></i></a></td>
+									  class="btn btn-success" ><i class="fa fa-edit"></i></a></td>
+
+                  <td align="center">
+                  <?php $department_conversion=false; ?>
+                  <?php $clinic_id=0; ?>
+
+                    @if($row->closed)
+                      {{ "تم إنهاء زيارة المريض" }}
+                    @else
+                      @foreach($row->medicalunits as $medicalunit)
+                          @if($medicalunit->pivot->department_conversion != null)
+                          <?php $department_conversion=true; ?>
+                          @endif
+                          <?php $clinic_id=$medicalunit->id  ?>
+                      @endforeach
+                      @if($department_conversion)
+                          {{ "تم التحويل المريض" }}
+                      @else
+                        <a href=' {{ url("admin/$id&$vid&$clinic_id/converttoentry") }} '
+                          class="btn btn-warning" ><i class="fa fa-undo"></i></a>
+                      @endif
+                    @endif
+                  </td>
 								</tr>
 								<?php $i++;?>
 								@endforeach

@@ -33,7 +33,10 @@ class User extends Authenticatable
 	
 		return $this->belongsToMany('App\Entrypoint')->withTimestamps();
 	}
+	public function visits(){
 	
+		return $this->hasMany('App\Visit');
+	}
 	public function role(){
 	
 		return $this->belongsTo('App\Role');

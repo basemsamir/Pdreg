@@ -38,7 +38,7 @@
   <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
   <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
   <![endif]-->
-  
+  @yield('css')
 </head>
 <body class="hold-transition skin-blue sidebar-mini">
 	<div class="wrapper">
@@ -72,7 +72,8 @@
 		});
 
     $('.timepicker').timepicker({
-      showInputs: false
+      showInputs: false,
+			minuteStep: 1
     })
 		$("button[type='submit']").click(function(){
 			 $("#overlay").show();
@@ -83,7 +84,8 @@
 		$("#datepicker").datepicker(
 			{format:"yyyy-mm-dd",
 			 startDate: '-100y',
-			 endDate: '+0d'});
+			 endDate: '+0d',
+			 });
 		$("#datepicker2").datepicker(
 			{format:"yyyy-mm-dd",
 			 startDate: '-100y',
@@ -124,6 +126,14 @@
 		  "info": false,
 		  "autoWidth": false,
 
+		});
+		$('#visits_datatable').DataTable({
+		  "bSort": false,
+		  "paging": true,
+		  "lengthChange": true,
+		  "searching": true,
+		  "info": true,
+		  "autoWidth": false,
 		});
 		$("#datepicker").change(function(){
 			var birthdate = new Date($("#datepicker").val());

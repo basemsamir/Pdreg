@@ -141,7 +141,7 @@
 				<span><b>دليل المرضى</b></span> <i class="fa fa-book"></i>
 			</a>
 		</li>
-		<li class="treeview {{ isset($r1_active) || isset($r2_active) || isset($r3_active) || isset($r4_active) || isset($r5_active) || isset($r6_active) || isset($r7_active) || isset($r8_active) || isset($r9_active) || isset($r10_active)? 'active':'' }}">
+		<li class="treeview {{ isset($r1_active) || isset($r2_active) || isset($r3_active) || isset($r4_active) || isset($r5_active) || isset($r6_active) || isset($r7_active) || isset($r8_active) || isset($r9_active) || isset($r10_active) || isset($r11_active)? 'active':'' }}">
 			<a href="#">
 				<span><b>تقارير</b></span>
 				<span class="pull-right-container">
@@ -245,6 +245,47 @@
 				    <li class=" {{ isset($r6_active)? 'active':'' }} " >
 					  <a href='{{url("admin/print_total_inpatients")}}'><b>تقرير حصر دخول مرضى الداخلي</b><i class="fa fa-circle-o"></i></a>
 					</li>
+				</ul>
+			  </li>
+				<li class="treeview {{ isset($r11_active)? 'active':'' }}">
+				<a href="#">
+					<span><b>تقارير طبية</b></span>
+					<span class="pull-right-container">
+					  <i class="fa fa-angle-left pull-right"></i>
+					</span>
+					<i class="fa fa-pie-chart"></i>
+				</a>
+				<ul class="treeview-menu">
+					<li class=" {{ isset($r4_active)? 'active':'' }} " >
+					  <a href="{{url('admin/medicalreports/clinics')}}">
+						<span><b>عيادات خارجية</b></span> <i class="fa fa-circle-o"></i>
+					  </a>
+				  </li>
+					<li class=" {{ isset($r4_active)? 'active':'' }} " >
+					  <a href="{{url('admin/medicalreports/entry_clinics')}}">
+						<span><b>اقسام داخلية عيادات خارجية</b></span> <i class="fa fa-circle-o"></i>
+					  </a>
+				  </li>
+					<li class=" {{ isset($r4_active)? 'active':'' }} " >
+					  <a href="{{url('admin/medicalreports/gdesk')}}">
+						<span><b>استقبال عام</b></span> <i class="fa fa-circle-o"></i>
+					  </a>
+				  </li>
+					<li class=" {{ isset($r4_active)? 'active':'' }} " >
+					  <a href="{{url('admin/medicalreports/entry_gdesk')}}">
+						<span><b>اقسام داخلية استقبال عام</b></span> <i class="fa fa-circle-o"></i>
+					  </a>
+				  </li>
+					<li class=" {{ isset($r4_active)? 'active':'' }} " >
+					  <a href="{{url('admin/medicalreports/tdesk')}}">
+						<span><b>استقبال اصابات</b></span> <i class="fa fa-circle-o"></i>
+					  </a>
+				  </li>
+					<li class=" {{ isset($r4_active)? 'active':'' }} " >
+					  <a href="{{url('admin/medicalreports/entry_tdesk')}}">
+						<span><b>اقسام داخلية استقبال اصابات</b></span> <i class="fa fa-circle-o"></i>
+					  </a>
+				  </li>
 				</ul>
 			  </li>
         <li class="treeview {{ isset($r10_active)? 'active':'' }}">

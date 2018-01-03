@@ -1,8 +1,14 @@
 # Pdreg Web Application
 
-Pdreg registration is a web application that serves a hospital in recording all incoming patients data either inpatients or outpatients to keep full medical history about them in one big database 
+Pdreg is a web application that serves a hospital in recording all incoming patients data either inpatients or outpatients to keep full medical history about them in one big database. 
 
-Pdreg registration enables doctors to follow up patients status and  record patient complaint and the diagnose in every patient visit to hospital.
+Pdreg enables doctors to follow up patients status and  record patient complaint and the diagnose in every patient visit to hospital.
+
+Pdreg have four modules (Clinic ticket reservation, Emergency reservation, Medical diagnose, Admin dashboard).
+
+Pdreg supports Arabic only.
+
+Pdreg supports web service that communicates with HL7 protocol to reserve a procedure on medical device.
  
 ## Security Vulnerabilities
 

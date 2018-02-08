@@ -40,7 +40,7 @@
 										@else
 											{!! Form::label('أسم العيادة :',null) !!}
 										@endif
-										{!! Form::label($visit[0]->medicalunits[0]->name) !!}
+										{!! Form::label($visit[0]->all_deps?'إستكشاف طارىء':$visit[0]->medicalunits[0]->name) !!}
 									</div>
 									@if($visit[0]->ticket_type != null)
 									<div class="form-inline">

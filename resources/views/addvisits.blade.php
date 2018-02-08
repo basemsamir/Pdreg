@@ -61,48 +61,24 @@
 							  {!! Form::text('name',$data[0]->name,array('class'=>'form-control','disabled'=>'disabled')) !!}
 							  {!! Form::hidden('code',$data[0]->id) !!}
 							</div>
+							<div class="form-group" >
+							  {!! Form::label('السن',null) !!}
+							  {!! Form::text('name',calculateAge($data[0]->birthdate),array('class'=>'form-control','disabled'=>'disabled')) !!}
+							</div>
 							<div class="form-group">
-							   {!! Form::label('الرقم القومي',null) !!}
-								{!! Form::number('p_sid',$data[0]->sid,array('class'=>'form-control','disabled'=>'disabled','placeholder'=>'الرقم القومي')) !!}
+							   {!! Form::label('رقم البطاقة',null) !!}
+								{!! Form::number('p_sid',$data[0]->sid,array('class'=>'form-control','disabled'=>'disabled')) !!}
 								{!! Form::hidden('patient_sid',$data[0]->sid,['id'=>'patient_sid']) !!}
 								{!! Form::hidden('birthdate',null,['id'=>'birthdate']) !!}
 								{!! Form::hidden('age',null,['id'=>'age']) !!}
 							</div>
 							<div class="form-group" >
 							  {!! Form::label('العنوان',null) !!}
-							  {!! Form::text('name',$data[0]->address,array('class'=>'form-control','disabled'=>'disabled')) !!}
+							  {!! Form::text('name',$data[0]->paddress,array('class'=>'form-control','disabled'=>'disabled')) !!}
 							</div>
 							<div class="form-group" >
-							  {!! Form::label('السن',null) !!}
-							    <?php
-									$current_date = new DateTime();
-									$birthdate = new DateTime($data[0]->birthdate);
-									$interval = $current_date->diff($birthdate);
-									$age="";
-								?>
-								@if($interval->y > 0)
-								  <?php $age = $interval->y; ?>
-								  @if( $interval->y > 10 )
-									<?php $age.= " سنة"; ?>
-								  @else
-									<?php $age.= " سنوات"; ?>
-								  @endif
-								@elseif($interval->m > 0)
-								   <?php $age.= $interval->m  ?>
-								  @if( $interval->m > 10 )
-									<?php  $age.= " شهر";  ?>
-								  @else
-									<?php  $age.= " شهور";  ?>
-								  @endif
-								@else
-								  <?php  $age.= $interval->d  ?>
-								  @if( $interval->d > 10 )
-									<?php  $age.= " يوم" ; ?>
-								  @else
-									<?php  $age.= " أيام";  ?>
-								  @endif
-								@endif
-							  {!! Form::text('name',$age,array('class'=>'form-control','disabled'=>'disabled')) !!}
+							  {!! Form::label('المهنة',null) !!}
+							  {!! Form::text('name',$data[0]->pjob,array('class'=>'form-control','disabled'=>'disabled')) !!}
 							</div>
 						</div>
 
@@ -121,11 +97,11 @@
 									  @if ($errors->has('c_name'))<span class="help-block">{{$errors->first('c_name')}}</span>@endif
 									</div>
 									<div class="form-group @if ($errors->has('sid')) has-error @endif">
-									  {!! Form::label('رقم القومي',null) !!}
+									  {!! Form::label('رقم البطاقة',null) !!}
 									   @if(isset($data[0]->c_sid))
-										{!! Form::text('sid',$data[0]->c_sid,array('id'=>'eid','class'=>'form-control','placeholder'=>'الرقم القومي','onkeypress'=>'return isNumber(event)&&isForteen("eid")')) !!}
+										{!! Form::text('sid',$data[0]->c_sid,array('id'=>'eid','class'=>'form-control','placeholder'=>'رقم البطاقة','onkeypress'=>'return isNumber(event)&&isForteen("eid")')) !!}
 									   @else
-										{!! Form::text('sid',null,array('id'=>'eid','class'=>'form-control','placeholder'=>'الرقم القومي','onkeypress'=>'return isNumber(event)&&isForteen("eid")')) !!}
+										{!! Form::text('sid',null,array('id'=>'eid','class'=>'form-control','placeholder'=>'رقم البطاقة','onkeypress'=>'return isNumber(event)&&isForteen("eid")')) !!}
 									   @endif
 									   @if ($errors->has('sid'))<span class="help-block">{{$errors->first('sid')}}</span>@endif
 								    </div>

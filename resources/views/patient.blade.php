@@ -65,11 +65,11 @@
 							
 							<div class="form-group @if($errors->has('sid')) has-error @endif">
 							@if(old('patient_id') != "") 
-							  {!! Form::label('الرقم القومي',null,array('style'=>'color:red')) !!}
-							  {!! Form::text('sid',null,array('size'=>'14','class'=>'form-control','disabled','id'=>'sid','placeholder'=>'الرقم القومي','onkeypress'=>'return isNumber(event)&&isForteen("sid")')) !!}
+							  {!! Form::label('رقم البطاقة',null,array('style'=>'color:red')) !!}
+							  {!! Form::text('sid',null,array('size'=>'14','class'=>'form-control','disabled','id'=>'sid','placeholder'=>'رقم البطاقة','onkeypress'=>'return isNumber(event)&&isForteen("sid")')) !!}
 							@else
-							  {!! Form::label('الرقم القومي',null,array('style'=>'color:red')) !!}
-							  {!! Form::text('sid',null,array('size'=>'14','class'=>'form-control','id'=>'sid','placeholder'=>'الرقم القومي','onkeypress'=>'return isNumber(event)&&isForteen("sid")')) !!}
+							  {!! Form::label('رقم البطاقة',null,array('style'=>'color:red')) !!}
+							  {!! Form::text('sid',null,array('size'=>'14','class'=>'form-control','id'=>'sid','placeholder'=>'رقم البطاقة','onkeypress'=>'return isNumber(event)&&isForteen("sid")')) !!}
 							@endif
 							  @if ($errors->has('sid'))<span class="help-block">{{$errors->first('sid')}}</span>@endif
 							</div>
@@ -166,8 +166,8 @@
 								  @if ($errors->has('c_name'))<span class="help-block">{{$errors->first('c_name')}}</span>@endif
 								</div>
 								<div class="form-group @if($errors->has('e_sid')) has-error @endif">
-								  {!! Form::label('الرقم القومي',null) !!}
-								  {!! Form::text('e_sid',null,array('class'=>'form-control','id'=>'eid','placeholder'=>'الرقم القومي','onkeypress'=>'return isNumber(event)&&isForteen("eid")')) !!}
+								  {!! Form::label('رقم البطاقة',null) !!}
+								  {!! Form::text('e_sid',null,array('class'=>'form-control','id'=>'eid','placeholder'=>'رقم البطاقة','onkeypress'=>'return isNumber(event)&&isForteen("eid")')) !!}
 								  @if ($errors->has('e_sid'))<span class="help-block">{{$errors->first('e_sid')}}</span>@endif
 								</div>
 								<div class="form-group @if($errors->has('relation_id')) has-error @endif">
@@ -522,7 +522,7 @@ function calculateBOD(sid){
 	else if(sid_string[0] == 4)
 		prifx_year="21";
 	else{
-		$("#err_msg").html('الرقم القومي غير صحيح');
+		$("#err_msg").html('رقم البطاقة غير صحيح');
 		$("#err_msg").show();
 		$("#sid").val("");
 		$("#datepicker").removeAttr("disabled");

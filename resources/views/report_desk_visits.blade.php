@@ -112,7 +112,12 @@
 								<tbody>
 								@if(isset($visits_user))
 									@foreach($visits_user as $visits_row)
+										<?php $all_deps=false;?>
 										@foreach($visits_row as $row)
+										@if( $all_deps )
+											<?php $all_deps=$row->all_deps;?>
+											@continue
+										@endif
 										<tr>
 											<td>{{$row->serial_number}}</td>
 											<td>{{$row->ticket_number}}</td>
@@ -120,36 +125,9 @@
 										  <td>{{$row->registration_datetime}}</td>
 										  <td>{{$row->name}}</td>
 										  <td>{{$row->gender=='M'?'ذكر':'أنثي'}}</td>
-										  <td>
-											<?php
-													$current_date = new DateTime();
-													$birthdate = new DateTime($row->birthdate);
-													$interval = $current_date->diff($birthdate);
-											?>
-											@if($interval->y > 0)
-												{{ $interval->y }}
-												@if( $interval->y > 11 )
-													{{ "سنة" }}
-												@else
-													{{ "سنوات" }}
-												@endif
-											@elseif($interval->m > 0)
-												{{ $interval->m }}
-												@if( $interval->m > 11 )
-													{{ "شهر" }}
-												@else
-													{{ "شهور" }}
-												@endif
-											@else
-												{{ $interval->d." يوم " }}
-												@if( $interval->d > 11 )
-													{{ "يوم" }}
-												@else
-													{{ "أيام" }}
-												@endif
-											@endif
-											</td>
-										  <td>{{$row->dept_name}}</td>
+										  <td>{{ calculateAge($row->birthdate)}}</td>
+										  <td>{{$row->all_deps?'إستكشاف طاريء':$row->dept_name}}
+											<?php $all_deps=$row->all_deps;?></td>
 										  <td>{{$row->user_name}}</td>
 
 										</tr>

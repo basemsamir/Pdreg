@@ -656,10 +656,10 @@ class PatientController extends Controller
 		if(isset($input['id']) && $input['id'] != "")
 		{
 			// check if a patient is already exist ( visit closed flag is false ) in the same clinic where he/she reserves.
-			if($this->checkIfPatientIsExistTodayInClinic($input['id'],$input['medical_id']) > 0)
+			if($this->checkIfPatientIsExistTodayInClinic($input['id'],$input['medical_id'],(isset($input['all_deps'])),$input['reg_date']) > 0)
 			{
 				$request->session()->flash('message_type', "false");
-				$request->session()->flash('flash_message', "هذا المريض تم تسجيل له هذا الحجز و لم يتم أنهاءه");
+				$request->session()->flash('flash_message', "هذا المريض تم تسجيل له هذا الحجز في هذة العيادة و لم يتم أنهاءه");
 			}
 			else{
 				// check if a patient is already exist in a department.
@@ -721,13 +721,17 @@ class PatientController extends Controller
 						$messages['c_sid.different'] = 'حقل رقم بطاقة المرافق يجب أن يكون مختلف عن رقم بطاقة المريض.';
 						$messages['c_sid.sin_format'] = 'رقم البطاقة غير صحيح.';
 						$messages['file_number.required'] = 'هذا الحقل مطلوب الأدخال.';
+						$messages['file_number.unique'] = 'هذا الرقم موجود من قبل';
 						$messages['file_type.required'] = 'هذا الحقل مطلوب الأدخال';
+						$messages['entry_date.date'] = 'هذا الحقل يجب أن يكون تاريخ';
+						$messages['entry_date.after'] = 'تاريخ الدخول يجب أن يكون أكبر من تاريخ التسجيل.';
 						
+						$constraints['entry_date']='date|after:reg_date';
 						$constraints['c_name']='required_with:c_sid|min:2|max:50';
 						$constraints['c_address']='min:2';
 						$constraints['c_job']='min:2';
 						$constraints['c_sid']='sin_format|different:sid';
-						$constraints['file_number']='required';
+						$constraints['file_number']='required|unique:visits,file_number';
 						$constraints['file_type']='required';
 					}
 					$this->validate($request, $constraints ,$messages);
@@ -776,8 +780,9 @@ class PatientController extends Controller
 							$visit_input_data['reference_doctor_id']=$input['reference_doctor_id']==""?null:$input['reference_doctor_id'];
 							
 		
-							$visit_input_data['entry_time']=$input['reg_time'];
-							$visit_input_data['entry_date']=$input['reg_date'];
+							$visit_input_data['entry_date']=$input['entry_date']==""?$input['reg_date']:$input['entry_date'];
+							$visit_input_data['entry_time']=$input['entry_time']==""?$input['reg_time']:$input['entry_time'];
+						
 						}
 						$visit=Visit::create($visit_input_data);
 						if($input['reservation_type'] == "T&E"){
@@ -792,7 +797,19 @@ class PatientController extends Controller
 							$visit->medicalunits()->attach($department_id->parent_department_id);
 						}
 						else{
-							$visit->medicalunits()->attach($input['medical_id']);
+
+							if(isset($input['all_deps'])){								
+								$visit->all_deps=true;
+								$visit->save();
+								$all_clinics=MedicalUnit::where('type','c')->lists('id');
+								$all_clinics=$all_clinics->toArray();
+								$visit->medicalunits()->attach($all_clinics);
+								
+							}
+							else{
+								$visit->medicalunits()->attach($input['medical_id']);
+							}
+
 						}
 						DB::commit();
 						$request->session()->flash('flash_message', "تم التسجيل بنجاح - كود المريض : $input[id] ");
@@ -826,6 +843,7 @@ class PatientController extends Controller
 				'lname.alpha' =>'حقل الأسم الرابع أن يكون حروف فقط بدون وجود مسافات.',
 				'serial_number.required' => 'هذا الحقل مطلوب الأدخال.',
 				'reg_date.required' => 'هذا الحقل مطلوب الأدخال.',
+				'reg_date.date' => 'هذا الحقل يجب أن يكون تاريخ',
 				'gender.required' => 'هذا الحقل مطلوب الأدخال.',
 				'address.required' => 'هذا الحقل مطلوب الأدخال.',
 				'job.required' => 'هذا الحقل مطلوب الأدخال.',
@@ -873,7 +891,7 @@ class PatientController extends Controller
 			}
 			$constraints['ticket_type']='required';
 			$constraints['entry']='required';
-			$constraints['medical_id']='required';
+			$constraints['medical_id']='required_if:all_deps,false';
 			$constraints['reservation_type']='required';
 			$constraints['sent_by_person']='required';
 			$constraints['ticket_companion_name']='required_with:ticket_companion_sin';
@@ -889,13 +907,17 @@ class PatientController extends Controller
 				$messages['c_sid.different'] = 'حقل رقم بطاقة المرافق يجب أن يكون مختلف عن رقم بطاقة المريض.';
 				$messages['c_sid.sin_format'] = 'رقم البطاقة غير صحيح.';
 				$messages['file_number.required'] = 'هذا الحقل مطلوب الأدخال.';
+				$messages['file_number.unique'] = 'هذا الرقم موجود من قبل';
 				$messages['file_type.required'] = 'هذا الحقل مطلوب الأدخال';
+				$messages['entry_date.date'] = 'هذا الحقل يجب أن يكون تاريخ';
+				$messages['entry_date.after'] = 'تاريخ الدخول يجب أن يكون أكبر من تاريخ التسجيل.';
 				
+				$constraints['entry_date']='date|after:reg_date';
 				$constraints['c_name']='required_with:c_sid|min:2|max:50';
 				$constraints['c_address']='min:2';
 				$constraints['c_job']='min:2';
 				$constraints['c_sid']='sin_format|different:sid';
-				$constraints['file_number']='required';
+				$constraints['file_number']='required|unique:visits,file_number';
 				$constraints['file_type']='required';
 			}
 			$this->validate($request, $constraints ,$messages);
@@ -941,6 +963,8 @@ class PatientController extends Controller
 					'ticket_companion_sin'=>$input['ticket_companion_sin']==""?null:$input['ticket_companion_sin']
 				);
 				if($input['reservation_type'] == "T&E"){
+
+					
 					$visit_input_data['c_name']=$input['c_name']==""?null:$input['c_name'];
 					$visit_input_data['sid']=$input['c_sid']==""?null:$input['c_sid'];
 					$visit_input_data['relation_id']=$input['relation_id']==""?null:$input['relation_id'];
@@ -954,9 +978,8 @@ class PatientController extends Controller
 					$visit_input_data['converted_by_doctor']=$input['converted_by_doctor']==""?null:$input['converted_by_doctor'];
 					$visit_input_data['reference_doctor_id']=$input['reference_doctor_id']==""?null:$input['reference_doctor_id'];
 					
-
-					$visit_input_data['entry_time']=$input['reg_time'];
-					$visit_input_data['entry_date']=$input['reg_date'];
+					$visit_input_data['entry_date']=$input['entry_date']==""?$input['reg_date']:$input['entry_date'];
+					$visit_input_data['entry_time']=$input['entry_time']==""?$input['reg_time']:$input['entry_time'];
 				}
 				$visit=Visit::create($visit_input_data);
 				if($input['reservation_type'] == "T&E"){
@@ -971,7 +994,17 @@ class PatientController extends Controller
 					$visit->medicalunits()->attach($clinic_id->parent_department_id);
 				}
 				else{
-					$visit->medicalunits()->attach($input['medical_id']);
+					if(isset($input['all_deps'])){
+						$visit->all_deps=true;
+						$visit->save();
+						$all_clinics=MedicalUnit::where('type','c')->lists('id');
+						$all_clinics=$all_clinics->toArray();
+						$visit->medicalunits()->attach($all_clinics);
+						
+					}
+					else{
+						$visit->medicalunits()->attach($input['medical_id']);
+					}
 				}
 				
 				DB::commit();
@@ -980,6 +1013,7 @@ class PatientController extends Controller
 			}
 			catch(\Exception $e){
 				DB::rollback();
+				dd($e);
 				$request->session()->flash('message_type', "false");
 				$request->session()->flash('flash_message', "حدثت مشكلة فى أدخال البيانات! حاول مرة أخرى");
 			}
@@ -1031,7 +1065,7 @@ class PatientController extends Controller
 				  ->where('visits.id','=',$visit_id)
 				  ->where('patients.id','=',$id)
 				  ->where('type','=','d')
-				  ->select('patients.id as id','visits.id as vid','patients.name as name','patients.birthdate','patients.sid','medical_units.id as dept_id','c_name','visits.sid as c_sid','relation_id','visits.address as vaddress','visits.job as vjob','visits.phone_num as vphone','entry_id',
+				  ->select('patients.id as id','visits.id as vid','patients.name as name','patients.address as paddress','patients.job as pjob','patients.birthdate','patients.sid','medical_units.id as dept_id','c_name','visits.sid as c_sid','relation_id','visits.address as vaddress','visits.job as vjob','visits.phone_num as vphone','entry_id',
 				  'entry_time','entry_date','reference_doctor_id','room_number','file_number','contract','cure_type_id','file_type'
 				  ,'converted_by_doctor')
 				  ->get();
@@ -1061,7 +1095,7 @@ class PatientController extends Controller
 	{
 		$input=$request->all();
 		// Common constraints and their displayed messages
-		$messages['sid.sin_format'] = 'رقم القومي غير صحيح';
+		$messages['sid.sin_format'] = 'رقم البطاقة غير صحيح';
 		$messages['sid.different'] = 'حقل رقم بطاقة المرافق يجب أن يكون مختلف عن رقم بطاقة المريض';
 		$messages['c_name.required'] = 'هذا الحقل مطلوب الأدخال';
 		$messages['c_name.min'] ='هذا الحقل يجب الأ يقل عن :min حروف';
@@ -1181,7 +1215,7 @@ class PatientController extends Controller
 
 	}
 	// check if a patient is already exist ( visit closed flag is false ) in the same or another clinic where he/she reserve.
-	public function checkIfPatientIsExistTodayInClinic($pid,$mid='')
+	public function checkIfPatientIsExistTodayInClinic($pid,$mid='',$all_deps=false,$reg_date='')
 	{
 		if($mid=="")
 			$patient_visits=Patient::find($pid)
@@ -1199,9 +1233,19 @@ class PatientController extends Controller
 									 ->join('medical_unit_visit','medical_unit_visit.visit_id','=','visits.id')
 									 ->join('medical_units','medical_units.id','=','medical_unit_visit.medical_unit_id')
 									 ->where('type','c')
-									 ->where('medical_units.id',$mid)
-									 ->whereDate('visits.created_at','=',date('Y-m-d',time()))
-									 ->where('medical_unit_id',$mid)
+									 ->where(function($query) use($mid,$all_deps,$reg_date){
+										if(!$all_deps){
+											$query->where('medical_units.id',$mid);
+											if($reg_date=='')
+												$query->whereDate('visits.created_at','=',date('Y-m-d',time()));
+											else
+												$query->whereDate('visits.registration_datetime','=',$reg_date);
+										}
+										else{
+											$query->whereDate('visits.registration_datetime','=',$reg_date);
+										}
+											
+									 })
 									 ->where('closed',false)
 									 ->where('cancelled',false)
 									 ->count();

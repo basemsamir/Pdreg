@@ -1628,23 +1628,25 @@ class AdminController extends Controller
 		];
 		if(isset($input['ticket_number']))
 		{
-			if($input['ticket_status'] == "T"){
-				if($input['ticket_type']==""){
-					$clinic_ticket=Visit::where('ticket_number',$input['ticket_number'])
-															->whereNull('ticket_type')
-															->where('id','<>',$vid)
-															->first();
-					if(count($clinic_ticket) > 0){
-							return redirect()->back()->withErrors(['ticket_number'=>'رقم التذكرة موجود من قبل .'])->withInput();
+			if(isset($input['ticket_status'])){
+				if($input['ticket_status'] == "T"){
+					if($input['ticket_type']==""){
+						$clinic_ticket=Visit::where('ticket_number',$input['ticket_number'])
+																->whereNull('ticket_type')
+																->where('id','<>',$vid)
+																->first();
+						if(count($clinic_ticket) > 0){
+								return redirect()->back()->withErrors(['ticket_number'=>'رقم التذكرة موجود من قبل .'])->withInput();
+						}
 					}
-				}
-				else{
-					$desk_ticket=Visit::where('ticket_number',$input['ticket_number'])
-															->whereNotNull('ticket_type')
-															->where('id','<>',$vid)
-															->first();
-					if(count($desk_ticket) > 0){
-							return redirect()->back()->withErrors(['ticket_number'=>'رقم التذكرة موجود من قبل .'])->withInput();
+					else{
+						$desk_ticket=Visit::where('ticket_number',$input['ticket_number'])
+																->whereNotNull('ticket_type')
+																->where('id','<>',$vid)
+																->first();
+						if(count($desk_ticket) > 0){
+								return redirect()->back()->withErrors(['ticket_number'=>'رقم التذكرة موجود من قبل .'])->withInput();
+						}
 					}
 				}
 			}
@@ -1674,7 +1676,7 @@ class AdminController extends Controller
 		if($input['sid']!="")
 			$birthdate=return_birthdate($input['sid']);
 		else
-			$birthdate=return_birtdate($input['day_age'],$input['month_age'],$input['year_age']);
+			$birthdate=return_birthdate($input['day_age'],$input['month_age'],$input['year_age']);
 		
 		DB::beginTransaction();
 		try{
@@ -1955,7 +1957,7 @@ class AdminController extends Controller
 								  ->orWhere('department_conversion',1);
 						})
 
-					  ->select(DB::raw(" (select name from users where users.id=visits.user_id) as user_name "),'patients.id','patients.name','visits.ticket_number','ticket_type','patients.gender','patients.address','patients.birthdate','patients.sid','medical_units.name as dept_name','visits.created_at','visits.serial_number','visits.registration_datetime')
+					  ->select(DB::raw(" (select name from users where users.id=visits.user_id) as user_name "),'patients.id','patients.name','visits.ticket_number','ticket_type','patients.gender','patients.address','patients.birthdate','patients.sid','medical_units.name as dept_name','visits.created_at','visits.serial_number','visits.registration_datetime','all_deps')
 					  ->orderBy('visits.registration_datetime','asc') 
 					  ->orderBy('visits.created_at','asc')
 					  ->get();

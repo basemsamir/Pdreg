@@ -8,7 +8,7 @@ Pdreg have four modules (Clinic ticket reservation, Emergency reservation, Medic
 
 Pdreg supports Arabic only.
 
-Pdreg supports web service that communicates with HL7 protocol to reserve a procedure on medical device.
+Pdreg supports web service that communicates with HL7 protocol to a procedure on medical device.
  
 ## Security Vulnerabilities
 

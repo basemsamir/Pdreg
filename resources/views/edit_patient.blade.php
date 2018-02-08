@@ -41,13 +41,18 @@
 					@endif
 					<div class="alert alert-danger" style="display: none" id="err_msg"></div>
 					<div class="row">
-						<div class="col-lg-6" style="float:right">
+						<div class="col-lg-6" >
 
               @if(!is_null($visit))
 								@if(isset($visit[0]->ticket_type))
 								<div class="form-group">
 									{!! Form::label('حالة التذكرة',null,array('style'=>'color:red')) !!}
 									{!! Form::select('ticket_status',['T'=>'عادي','F' => 'مجاني'], $visit[0]->ticket_status,['class'=>'form-control','id'=>'ticket_status_select']); !!}
+								</div>
+								<div class="form-group @if($errors->has('ticket_type'))  has-error @endif">
+										{!! Form::label('نوع التذكرة',null,array('style'=>'color:red')) !!}
+										{!! Form::select('ticket_type',['G' => 'استقبال عام', 'T' => 'استقبال اصابات'], $visit[0]->ticket_type,['class'=>'form-control','id'=>'ticket_type_select']) !!}
+										@if ($errors->has('ticket_type'))<span class="help-block">{{$errors->first('ticket_type')}}</span>@endif
 								</div>
 								@endif
                 <div class="form-group @if($errors->has('ticket_number')) has-error @endif ">
@@ -56,6 +61,7 @@
                   @if ($errors->has('ticket_number'))<span class="help-block">{{$errors->first('ticket_number')}}</span>@endif
                   {!! Form::hidden('ticket_type',$visit[0]->ticket_type) !!}
                 </div>
+								
 								@if(isset($visit[0]->ticket_type))
 										<div class="form-group @if($errors->has('serial_number')) has-error @endif">
 											{!! Form::label('رقم التسلسل',null,array('style'=>'color:red')) !!}
@@ -81,16 +87,29 @@
 											{!! Form::label('المشاهدة',null) !!}
 											{!! Form::text('watching_status',$visit[0]->watching_status,array('class'=>'form-control','placeholder'=>'المشاهدة')) !!}
 										</div>
-										<div class="form-group @if($errors->has('ticket_type'))  has-error @endif">
-												{!! Form::label('نوع التذكرة',null,array('style'=>'color:red')) !!}
-												{!! Form::select('ticket_type',['G' => 'استقبال عام', 'T' => 'استقبال اصابات'], $visit[0]->ticket_type,['class'=>'form-control','id'=>'ticket_type_select']) !!}
-												@if ($errors->has('ticket_type'))<span class="help-block">{{$errors->first('ticket_type')}}</span>@endif
-										</div>
+										
+										<div class="form-group @if ($errors->has('sent_by_person')) has-error @endif">
+									{!! Form::label('مرسل بمعرفة',null,array('style'=>'color:red')) !!}
+									{!! Form::textarea('sent_by_person',$visit[0]->sent_by_person,array('class'=>'form-control','rows'=>5,'cols'=>4)) !!}
+									@if ($errors->has('sent_by_person'))<span class="help-block">{{$errors->first('sent_by_person')}}</span>@endif
+								
+								</div>
+								<div class="form-group @if ($errors->has('ticket_companion_name')) has-error @endif">
+									{!! Form::label('أسم مرافق الحجز',null) !!}
+									{!! Form::text('ticket_companion_name',$visit[0]->ticket_companion_name,array('class'=>'form-control','placeholder'=>'أسم مرافق الحجز')) !!}
+									@if ($errors->has('ticket_companion_name'))<span class="help-block">{{$errors->first('ticket_companion_name')}}</span>@endif
+								
+								</div>
+								<div class="form-group  @if ($errors->has('ticket_companion_sin')) has-error @endif">
+									{!! Form::label('رقم البطاقة مرافق الحجز',null) !!}
+									{!! Form::text('ticket_companion_sin',$visit[0]->ticket_companion_sin,array('class'=>'form-control','placeholder'=>'رقم البطاقة مرافق الحجز','onkeypress'=>'return isNumber(event)&&isForteen(this)')) !!}
+									@if ($errors->has('ticket_companion_sin'))<span class="help-block">{{$errors->first('ticket_companion_sin')}}</span>@endif
+								</div>
 								@endif
               @endif
 							
 						</div>
-						<div class="col-lg-6" style="float:right">
+						<div class="col-lg-6" >
 							<div class="form-group 	@if($errors->has('sid')) has-error @endif">
 							  {!! Form::label('رقم البطاقة',null) !!}
 								@if(isset($patient_data))
@@ -171,23 +190,7 @@
 									@endif
 									@if ($errors->has('job'))<span class="help-block">{{$errors->first('job')}}</span>@endif
 								</div>
-								<div class="form-group @if ($errors->has('sent_by_person')) has-error @endif">
-									{!! Form::label('مرسل بمعرفة',null,array('style'=>'color:red')) !!}
-									{!! Form::textarea('sent_by_person',$visit[0]->sent_by_person,array('class'=>'form-control','rows'=>5,'cols'=>4)) !!}
-									@if ($errors->has('sent_by_person'))<span class="help-block">{{$errors->first('sent_by_person')}}</span>@endif
-								
-								</div>
-								<div class="form-group @if ($errors->has('ticket_companion_name')) has-error @endif">
-									{!! Form::label('أسم مرافق الحجز',null) !!}
-									{!! Form::text('ticket_companion_name',$visit[0]->ticket_companion_name,array('class'=>'form-control','placeholder'=>'أسم مرافق الحجز')) !!}
-									@if ($errors->has('ticket_companion_name'))<span class="help-block">{{$errors->first('ticket_companion_name')}}</span>@endif
-								
-								</div>
-								<div class="form-group  @if ($errors->has('ticket_companion_sin')) has-error @endif">
-									{!! Form::label('رقم البطاقة مرافق الحجز',null) !!}
-									{!! Form::text('ticket_companion_sin',$visit[0]->ticket_companion_sin,array('class'=>'form-control','placeholder'=>'رقم البطاقة مرافق الحجز','onkeypress'=>'return isNumber(event)&&isForteen(this)')) !!}
-									@if ($errors->has('ticket_companion_sin'))<span class="help-block">{{$errors->first('ticket_companion_sin')}}</span>@endif
-								</div>
+							
 							@endif
 						</div>
 

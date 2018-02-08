@@ -166,11 +166,15 @@
 								  <td>{{$row->patient->id}} <?php $id=$row->patient->id;$vid=$row->id; ?></td>
 								  <td>{{$row->patient->name}}</td>
                   <td>
-                    @foreach($row->medicalunits as $medicalunit)
-                      @if($medicalunit->pivot->convert_to == null)
-                        {{$medicalunit->name}}
-                      @endif
-                    @endforeach
+                    @if(!$row->all_deps)
+                      @foreach($row->medicalunits as $medicalunit)
+                        @if($medicalunit->pivot->convert_to == null)
+                          {{$medicalunit->name}}
+                        @endif
+                      @endforeach
+                    @else
+                      {{'إستكشاف طارىء'}}
+                    @endif
                   </td>
                   <td align="center"><a href=' {{ url("admin/show/$vid") }} '
 									  class="btn btn-primary" ><i class="fa fa-eye"></i></a></td>

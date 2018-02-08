@@ -95,17 +95,20 @@
 								{!! Form::select('ticket_type',['G' => 'استقبال عام', 'T' => 'استقبال اصابات'], 'G',['class'=>'form-control','id'=>'ticket_type_select']) !!}
 							    @if ($errors->has('ticket_type'))<span class="help-block">{{$errors->first('ticket_type')}}</span>@endif
 							</div>
-							@if ($errors->has('medical_id'))
-                <div class="form-group has-error">
-              @else
-  							<div class="form-group"  >
-              @endif
+							
+              <div class="form-group @if ($errors->has('medical_id')) has-error @endif">
 							   {!! Form::label('أسم القسم',null,array('style'=>'color:red')) !!}
 							   {!! Form::select('medical_id',$medical_units,null,['id'=>'medical_id','class' => 'form-control']); !!}
-              @if ($errors->has('medical_id'))<span class="help-block">{{$errors->first('medical_id')}}</span>@endif
-
+             		 @if ($errors->has('medical_id'))<span class="help-block">{{$errors->first('medical_id')}}</span>@endif
 							</div>
-							
+							<div class="form-group">
+								<div class="checkbox icheck">
+									<label>
+										<input type="checkbox" id="all_deps" name="all_deps" />
+										إستشكاف طاريء
+									</label>
+								</div>
+							</div>
 						</div>
 						<div class="col-lg-4" style="float:right">
 							@if($errors->has('sid'))
@@ -257,6 +260,19 @@
             <div class="col-lg-4" style="float:right;display:none" id="companionDiv">
 						  <fieldset>
                 <legend>بيانات الملف</legend>
+									<div class="form-group @if($errors->has('entry_date')) has-error @endif">
+										{!! Form::label('تاريخ الدخول',null) !!}
+										{!! Form::text('entry_date',null,array('class'=>'form-control','id'=>'datepicker2','placeholder'=>'1900-01-01')) !!}
+										@if ($errors->has('entry_date'))<span class="help-block">{{$errors->first('entry_date')}}</span>@endif
+									</div>
+									<div class="bootstrap-timepicker">
+										<div class="form-group @if($errors->has('entry_time')) has-error @endif">
+											{!! Form::label('entry_time','ساعة الدخول') !!}
+											{!! Form::text('entry_time',null,array('class'=>'form-control timepicker')) !!}
+											@if ($errors->has('entry_time'))<span class="help-block">{{$errors->first('entry_time')}}</span>@endif
+									
+										</div>
+									</div>
   								<div class="form-group">
 										{!! Form::label('room_number','رقم الغرفة') !!}
 										{!! Form::text('room_number',null,array('class'=>'form-control','placeholder'=>'رقم الغرفة')) !!}
@@ -364,7 +380,15 @@ $(document).ready(function(){
 		 calculateBOD($('#sid').val(),$('#year_age'));
 	 }
 
-   $('#ticket_num').focus();
+	 if($('#ticket_status_select').val()=='F'){
+			$('#ticket_num').attr('readonly','readonly');
+		
+	 }
+	 else{
+		$('#ticket_num').removeAttr('readonly');
+		$('#ticket_num').focus();
+	 }
+
    if($("#reservation_type").val() == "T&E")
      $("#companionDiv").show();
    else {
@@ -380,6 +404,13 @@ $(document).ready(function(){
 				$('#ticket_num').attr('readonly','readonly');
 			else
 				$('#ticket_num').removeAttr('readonly');
+	});
+	/* Disable department field in case of emergency */
+	$("#all_deps").on('ifChanged',function(){
+		if($("#medical_id").attr("disabled"))
+			$("#medical_id").removeAttr("disabled");
+		else
+			$("#medical_id").attr("disabled","disabled");
 	});
 	/* Change department to get its attached doctors in reference_doctor_id select box */
 	$("#medical_id").change(function(){
@@ -593,7 +624,7 @@ function calculateBOD(sid){
 	}
 }
 function removeDisabled(){
-	$('#age').removeAttr('disabled');
+	$('#medical_id').removeAttr('disabled');
 	$('#pid').removeAttr('disabled');
 }
 function show_hideCompanionDiv(e){

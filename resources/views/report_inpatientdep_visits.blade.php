@@ -8,13 +8,14 @@
   <div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
+			<h1>
+			حصر دخول مرضى القسم الداخلي
+      </h1>
       <ol class="breadcrumb">
         <li><a href="{{ url('admin') }}"><i class="fa fa-dashboard"></i> الصفحة الرئيسية</a></li>
         <li class="active">حصر دخول مرضى القسم الداخلي</li>
       </ol>
-	  	<h1>
-			حصر دخول مرضى القسم الداخلي
-      </h1>
+	  	
     </section>
 
     <!-- Main content -->

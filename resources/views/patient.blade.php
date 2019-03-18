@@ -8,14 +8,15 @@
   <div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
+			<h1>
+        بيانات المريض
+        <small>تسجيل بيانات المريض</small>
+      </h1>
       <ol class="breadcrumb">
         <li><a href="{{ url('/') }}"><i class="fa fa-dashboard"></i> الصفحة الرئيسية</a></li>
         <li class="active">تسحيل بيانات المرضي</li>
       </ol>
-	  <h1>
-        بيانات المريض
-        <small>تسجيل بيانات المريض</small>
-      </h1>
+	  
     </section>
 
     <!-- Main content -->

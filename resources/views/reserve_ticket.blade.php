@@ -35,7 +35,7 @@
 						@else
 							<div class="alert alert-success">
 						@endif
-								<b>{{ Session::get('flash_message') }} </b>
+								<b>{!! Session::get('flash_message') !!} </b>
 								<br>
 								<?php $e=Session::get('vid'); ?>
 								@if($e!="")
@@ -83,11 +83,8 @@
 								{!! Form::text('ticket_num',null,array('class'=>'form-control','id'=>'ticket_num','placeholder'=>'رقم التذكرة','onkeypress'=>'return isNumber(event)')) !!}
 							  @if ($errors->has('ticket_num'))<span class="help-block">{{$errors->first('ticket_num')}}</span>@endif
 							</div>
-							@if ($errors->has('fname') || $errors->has('sname') || $errors->has('mname') || $errors->has('lname'))
-								<div class="form-group has-error">
-							@else
-								<div class="form-group">
-							@endif
+							
+							<div class="form-group @if ($errors->has('fname') || $errors->has('sname') || $errors->has('mname') || $errors->has('lname')) has-error @endif">
 							  {!! Form::label('الأسم',null,array('style'=>'color:red')) !!} <br>
 							  @if(isset($patient_data))
 								<?php $name_arr=explode(" ",$patient_data['name']);?>
@@ -114,6 +111,21 @@
 								@endif
 								</span>
 							  @endif
+								<div id="search_patients" style="display:none">
+									<h5><b> نتائج البحث  </b></h5>
+									<table id="existnames" class="table table-striped" >
+										<thead>
+											<tr>
+												<th>الأسم</th>
+												<th>العمر</th>
+												<th>العنوان</th>
+											</tr>
+										</thead>
+										<tbody>
+										</tbody>
+									</table>
+								</div>
+								
 							</div>
 							@if ($errors->has('gender'))
 								<div class="form-group has-error">
@@ -275,8 +287,7 @@
 
 				  <div class="box-footer">
 					<button type="button" class="btn btn-primary" onclick="$('#patient_form').submit();" >تسجيل</button>
-					<input type="reset" class="btn btn-success" value="جديد" onclick="$('#err_msg').hide();$('.form input').removeAttr('disabled');$('#gender_select').removeAttr('disabled');
-					$('#month_age').removeAttr('disabled');$('#day_age').removeAttr('disabled');$('.alert').hide();" />
+					<input type="button" class="btn btn-success" value="جديد" onclick="refresh()" />
 				  </div>
 				{!! Form::close() !!}
 			  </div>
@@ -298,6 +309,9 @@ $(document).ajaxStart(function(){
 $(document).ajaxComplete(function(){
     $("#overlay").hide();
 });
+function refresh(){
+	window.location = "{{ url('/patients/reserve/-1') }}";
+}
 $(document).ready(function(){
 
    $('#ticket_num').focus();
@@ -407,7 +421,13 @@ $(document).ready(function(){
 		});
 
 	});
+	$("#fname").change(checkExistName);
+	$("#sname").change(checkExistName);
+	$("#mname").change(checkExistName);
 });
+
+
+
 
 // Function accepts numbers only
 function isNumber(evt) {
@@ -478,6 +498,65 @@ function show_hideCompanionDiv(e){
   else {
     $("#companionDiv").hide();
   }
+}
+
+function checkExistName(){
+	if($("#fname").val() != "" && $("#sname").val() != "" && $("#mname").val() != "")
+		{
+			name=$("#fname").val()+" "+$("#sname").val()+" "+$("#mname").val();
+			var url = "{{ url('patients/checkName') }}";
+			$.ajax({
+				url: url,
+				type:'POST',
+				data:{
+					name:name
+				},
+				success:function(data){
+					namelinks='';
+					if(data.success === 'true'){
+						if(data.patients.length > 0){
+							for(i=0;i<data.patients.length;i++){
+								id=data.patients[i].id;
+								namelinks='{!! url("patients/reserve/'+id+'") !!}';
+								$("#existnames").append(`<tr>
+																					<td><a href="`+namelinks+`" class='btn btn-default' >`+data.patients[i].name+`</td>
+																					<td>`+returnAge(data.patients[i].birthdate)+`</td>
+																					<td>`+data.patients[i].address+`</a></td>`);
+							}
+						}
+						$("#search_patients").show();
+					}
+					else{
+						$("#search_patients").hide();
+						$("#existnames tr:gt(0)").remove();
+					}
+				},
+				error:function(error){
+					alert(error);
+				}
+			});
+		}
+}
+function returnAge(birthdate){
+	var date = new Date(birthdate);
+	var today = new Date();
+	var diffYears = today.getFullYear() - date.getFullYear();
+	var diffMonths = today.getMonth() - date.getMonth();
+	var diffDays = today.getDate() - date.getDate();
+	if(diffMonths < 0){
+		diffMonths+=12;
+		diffYears--;
+	}
+	if(diffDays < 0){
+		diffMonths--;
+		diffDays+=30;
+	}
+	if(diffYears > 0)
+		return diffYears+" سنة ";
+	else if(diffMonths > 0)
+		return diffMonths+" شهر ";
+	else 
+		return diffDays+" يوم ";
 }
 </script>
 @endsection

@@ -1,0 +1,10 @@
+No-supported-encrypter-found-the-cipher-and-or-key-length-are-invalid
+
+change cipher to AES-128-CBC 
+php artisan key:generate
+php artisan config:cache
+
+
+Production routine
+APP_ENV=production
+APP_DEBUG=false

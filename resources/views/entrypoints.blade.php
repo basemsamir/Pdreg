@@ -7,14 +7,15 @@
   <div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
+		<h1>
+        بيانات مكتب مستخدمي النظام
+      </h1>
       <ol class="breadcrumb">
         <li><a href="{{ url('/') }}"><i class="fa fa-dashboard"></i> الصفحة الرئيسية</a></li>
         <li class="active">أضافة المكاتب</li>
         <li class="active">إدارة مكاتب مستخدمي النظام</li>
       </ol>
-	  <h1>
-        بيانات مكتب مستخدمي النظام
-      </h1>
+	  
     </section>
 	
     <!-- Main content -->

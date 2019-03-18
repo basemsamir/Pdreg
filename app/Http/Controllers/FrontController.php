@@ -45,8 +45,14 @@ class FrontController extends Controller
 				property_exists($this, 'username') ? $this->username : 'email'=>Lang::get($rule_lang)]);
 		}
         $mid=$medicalunits[0]->id;
-        return redirect()->action('VisitController@index',array('mid'=>$mid));
-      }
+        return redirect()->action('VisitController@index',array('mid'=>$mid,'desk'=>-1));
+			}
+			elseif($role_name == "Pharmacist"){
+				return redirect('pharm/patient_drugs');
+			}
+			elseif($role_name == "Radiology Tech"){
+				return redirect('rad/patient_rads');
+			}
       elseif($role_name=="Admin" || $role_name=="SubAdmin"){
 
           return redirect()->action('AdminController@index');
@@ -97,6 +103,8 @@ class FrontController extends Controller
 			case 'Entrypoint':
 				if($user->entrypoints()->count() > 0)
 					return true;
+				return false;
+			case 'Pharmacist':
 				return false;
 			break;
 		}

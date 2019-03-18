@@ -7,14 +7,15 @@
   <div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
+			<h1>
+        دليل المرضى
+        <small>دليل بيانات المرضى</small>
+      </h1>
       <ol class="breadcrumb">
         <li><a href="{{ url('/') }}"><i class="fa fa-dashboard"></i> الصفحة الرئيسية</a></li>
         <li class="active">دليل المرضي</li>
       </ol>
-	  <h1>
-        دليل المرضى
-        <small>دليل بيانات المرضى</small>
-      </h1>
+	 		
     </section>
 
     <!-- Main content -->
@@ -31,35 +32,34 @@
 				<div class="box-body">
 
 					<div class="row" >
-					{!! Form::open(array('class'=>'form-inline','name'=>'patient_form')) !!}
-					 <div class="col-lg-4">
-						<button type="submit" class="btn btn-primary"><i class="fa fa-search"></i> بحث</button>
+					{!! Form::open() !!}
+					 
+					 <div class="col-lg-6">
+							<div class="form-group">
+								{!! Form::label('رقم البطاقة') !!}
+								{!! Form::text('sin',null,array('class'=>'form-control','placeholder'=>'رقم البطاقة')) !!}
+							</div>
+							<div class="form-group">
+								{!! Form::label('تاريخ الميلاد') !!}
+								{!! Form::text('birthdate',null,array('id'=>'datepicker','class'=>'form-control','placeholder'=>'تاريخ الميلاد')) !!}
+							</div>
 					 </div>
-					 <div class="col-lg-4">
+					 <div class="col-lg-6">
+					 		
 					    <div class="form-group">
-						  {!! Form::label('أسم المريض') !!}
-						  {!! Form::text('name',null,array('class'=>'form-control','placeholder'=>'أسم المريض')) !!}
-						</div>
-						<br><br>
-						<div class="form-group">
-						  {!! Form::label('تاريخ الميلاد') !!}
-						  {!! Form::text('birthdate',null,array('id'=>'datepicker','class'=>'form-control','placeholder'=>'تاريخ الميلاد')) !!}
-						</div>
-					 </div>
-					 <div class="col-lg-4">
-					    <div class="form-group">
-						  {!! Form::label('كود المريض') !!}
-						  {!! Form::text('code',null,array('class'=>'form-control','placeholder'=>'كود المريض')) !!}
-						</div><br><br>
-						<div class="form-group">
-						  {!! Form::label('الرقم القومي') !!}
-						  {!! Form::text('sin',null,array('class'=>'form-control','placeholder'=>'الرقم القومي')) !!}
-						</div>
+						  	{!! Form::label('أسم المريض') !!}
+						  	{!! Form::text('name',null,array('class'=>'form-control','placeholder'=>'أسم المريض')) !!}
+							</div>
+							<div class="form-group">
+						  	{!! Form::label('كود المريض') !!}
+						  	{!! Form::text('code',null,array('class'=>'form-control','placeholder'=>'كود المريض')) !!}
+							</div>
+							<button type="submit" class="btn btn-primary">بحث</button>
+							<a onclick="refresh()" class="btn btn-success">جديد</a>
 					 </div>
 					{!! Form::close() !!}
 					</div>
-					<br>
-
+					<hr>
 					<div class="row">
 						<div class="col-lg-12">
 							<h3>{{$table_header}}</h3>
@@ -70,7 +70,7 @@
 								  <th>الأسم</th>
 								  <th>النوع</th>
 								  <th>العنوان</th>
-								  <th>الرقم القومي</th>
+								  <th>رقم البطاقة</th>
 								  <th>تاريخ الميلاد</th>
 								  <th>تاريخ و وقت التسجيل</th>
 								  @if($role_name == 'Admin' || $role_name == 'SubAdmin')
@@ -127,4 +127,11 @@
     <!-- /.content -->
   </div>
 
+@endsection
+@section('javascript')
+<script>
+function refresh(){
+	window.location="{{ $url }}";
+}
+</script>
 @endsection

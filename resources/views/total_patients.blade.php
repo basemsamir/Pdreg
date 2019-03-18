@@ -50,16 +50,15 @@
 							</div>
 						</div>
 					 </div>
-					 <div class="col-lg-4">
+					 <div class="col-lg-2">
 						 <div class="form-group">
   							<div class="iradio">
   								<input type="radio" name="duration" id="duration2"> <label for="duration[2]">تاريخ معين</label>
   							</div>
-  							&nbsp;&nbsp;&nbsp;&nbsp;
   							{!! Form::text('determined_date',null,array('id'=>'datepicker3','disabled'=>'disabled','class'=>'form-control')) !!}
   						</div>
 					 </div>
-					 <div class="col-lg-4">
+					 <div class="col-lg-3">
 						<div class="form-group">
  							<div class="iradio checked">
  								<input type="radio" name="duration" id="duration" checked> <label for="duration[1]">فترة</label>
@@ -71,7 +70,34 @@
  						  {!! Form::text('todate',null,array('id'=>'datepicker2','class'=>'form-control')) !!}
  						</div>
 					 </div>
-
+					 <div class="col-lg-3">
+						<div class="form-group">
+ 							<div class="iradio checked">
+ 								<input type="radio" name="reservation_type" id="reservation_type" checked value="c"> <label for="reservation_type[1]">عيادات</label>
+								<input type="radio" name="reservation_type" id="reservation_type1" value="d"> <label for="reservation_type[1]">أستقبال</label>
+								<input type="radio" name="reservation_type" id="reservation_type2" value="e"> <label for="reservation_type[1]">داخلي</label>
+							</div>
+							<br>
+							<div id="clinic_div">
+								{!! Form::label('أسم العيادة') !!}
+								<select name="clinic" id="" class="form-control">
+									<option value="">الكل</option>
+									@foreach($clinics as $clinic)
+										<option value="{{$clinic->id}}">{{$clinic->name}}</option>
+									@endforeach
+								</select>
+							</div>
+							<div id="dep_div" style="display:none">
+								{!! Form::label('أسم القسم') !!}
+								<select name="department" id="" class="form-control">
+									<option value="">الكل</option>
+									@foreach($deps as $dep)
+										<option value="{{$dep->id}}">{{$dep->name}}</option>
+									@endforeach
+								</select>
+							</div>
+ 						</div>
+					 </div>
 					{!! Form::close() !!}
 					</div>
 				</div> <!-- box-body -->
@@ -88,9 +114,9 @@
 							<table id="example1" class="table table-bordered table-hover">
 								<thead>
 								<tr>
-								    <th>م</th>
-									<th>أسم العيادة</th>
-									<th>عدد حالات العيادة</th>
+								  <th>م</th>
+									<th>أسم {{ $reservation_type == 'c'?'العيادة':'القسم' }}</th>
+									<th>عدد حالات {{ $reservation_type == 'c'?'العيادة':'القسم' }}</th>
 								</tr>
 								</thead>
 								<tbody>
@@ -154,6 +180,23 @@ $(document).ready(function(){
 		  $("#datepicker3").attr("disabled",true);
 		  $("#datepicker3").val("");
 		}
+	});
+
+	$("#reservation_type").on('ifChanged',function(){
+		if($("#clinic_div").css('display') == "none"){
+				$("#clinic_div").toggle();
+				$("#dep_div").toggle();
+			}
+	});
+	$("#reservation_type1").on('ifChanged',function(){
+			if($("#clinic_div").css('display') == "none"){
+				$("#clinic_div").toggle();
+				$("#dep_div").toggle();
+			}
+	});
+	$("#reservation_type2").on('ifChanged',function(){
+			$("#clinic_div").toggle();
+			$("#dep_div").toggle();
 	});
 });
 </script>

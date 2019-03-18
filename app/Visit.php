@@ -82,13 +82,19 @@ class Visit extends Model
 	public function scopeNumberOfOutpatientsFromClinic($query){
 		return $query->where('cancelled',false)
 					 ->whereDate('created_at','=',Carbon::today()->format('Y-m-d'))
-					 ->whereNull('ticket_type')->get();
+					 ->whereNull('ticket_type')
+					 ->where('ticket_number','!=','')
+					 ->get();
 	}
 	/* Get number of outpatients were reserved from desk reservation office */
 	public function scopeNumberOfOutpatientsFromDesk($query){
 		return $query->where('cancelled',false)
 					 ->whereDate('created_at','=',Carbon::today()->format('Y-m-d'))
-					 ->whereNotNull('ticket_type')->get();
+					 ->where(function($query){
+						$query->whereNotNull('ticket_type')
+					 		  ->orWhereNotNull('convert_to_entry_id');
+					})->get();
+					 
 	}
 	public function entrypoint(){
 		

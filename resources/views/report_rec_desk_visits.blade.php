@@ -8,13 +8,14 @@
   <div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
+			<h1>
+        تقرير المحولون من حجز العيادة الي الأستقبال
+      </h1>
       <ol class="breadcrumb">
         <li><a href="{{ url('admin') }}"><i class="fa fa-dashboard"></i> الصفحة الرئيسية</a></li>
         <li class="active">تقرير المحولون من حجز العيادة الي الأستقبال</li>
       </ol>
-	  <h1>
-        تقرير المحولون من حجز العيادة الي الأستقبال
-      </h1>
+	  
     </section>
 
     <!-- Main content -->

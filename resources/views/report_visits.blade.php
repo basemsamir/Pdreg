@@ -8,13 +8,14 @@
   <div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
+			<h1>
+        تقرير مكاتب حجز التذاكر خلال فترة
+      </h1>
       <ol class="breadcrumb">
         <li><a href="{{ url('admin') }}"><i class="fa fa-dashboard"></i> الصفحة الرئيسية</a></li>
         <li class="active">تقرير مكاتب حجز التذاكر خلال فترة</li>
       </ol>
-	  <h1>
-        تقرير مكاتب حجز التذاكر خلال فترة
-      </h1>
+	  	
     </section>
 
     <!-- Main content -->
@@ -114,13 +115,13 @@
 										@foreach($visits_row as $row)
 										<tr>
 											<td>{{$row->ticket_number}}</td>
-										  <td>{{$row->id}}</td>
-										  <td>{{$row->name}}</td>
-										  <td>{{$row->gender=='M'?'ذكر':'أنثي'}}</td>
-										  <td>{{$row->sid}}</td>
-										  <td>{{$row->dept_name}}</td>
+										  <td>{{$row->patient->id}}</td>
+										  <td>{{$row->patient->name}}</td>
+										  <td>{{$row->patient->gender=='M'?'ذكر':'أنثي'}}</td>
+										  <td>{{$row->patient->sid}}</td>
+										  <td>{{$row->medicalunits[0]->name}}</td>
 										  <td>{{date($row->created_at->format('Y-m-d'))}}</td>
-										  <td>{{$row->user_name}}</td>
+										  <td>{{$row->user->name}}</td>
 
 										</tr>
 										@endforeach

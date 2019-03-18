@@ -23,7 +23,11 @@ class VerifyCsrfToken extends BaseVerifier
 		'visits/getMedicine',
 		'visits/getVisits',
 		'visits/getNewVisits',
+		'visits/remove_medicine',
+		'visits/remove_radiology',
 		'patients/getDepartmentDoctors',
 		'patients/getPatient',
+		'patients/checkName',
+		
     ];
 }

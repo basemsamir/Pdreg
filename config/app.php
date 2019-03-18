@@ -93,7 +93,7 @@ return [
 
     'key' => env('APP_KEY'),
 
-    'cipher' => 'AES-256-CBC',
+    'cipher' => 'AES-128-CBC',
 
     /*
     |--------------------------------------------------------------------------
@@ -167,7 +167,7 @@ return [
 		App\Providers\BindUserDataServiceProvider::class,
         Kim\Activity\ActivityServiceProvider::class,
         App\Providers\SINValidationRuleServiceProvider::class,
-        Maherelgamil\Arabicdatetime\ArabicdatetimeServiceProvider::class,
+        App\Providers\AfterOrEqualDateRuleServiceProvider::class
     ],
 
     /*

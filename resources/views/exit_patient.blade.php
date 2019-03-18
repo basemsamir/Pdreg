@@ -7,13 +7,14 @@
   <div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
+			<h1>
+        بيانات المريض
+      </h1>
       <ol class="breadcrumb">
         <li><a href="{{ url('/') }}"><i class="fa fa-dashboard"></i> الصفحة الرئيسية</a></li>
         <li class="active">خروج مريض</li>
       </ol>
-	  <h1>
-        بيانات المريض
-      </h1>
+	  	
     </section>
 
     <!-- Main content -->
@@ -108,6 +109,24 @@
 							  {!! Form::text('entry_date',null,array('id'=>'address','class'=>'form-control','placeholder'=>'تاريخ الدخول')) !!}
 							  @endif
 							  @if ($errors->has('entry_date'))<span class="help-block">{{$errors->first('entry_date')}}</span>@endif
+							</div>
+
+							<div class="form-group">
+							  {!! Form::label('التوصية',null,array('style'=>'color:red')) !!}
+							  @if(isset($data))
+									@if(isset($sub_type_entrypoint) && $sub_type_entrypoint == "entry_and_exit")
+										{!! Form::textarea('doctor_recommendation',$data[0]->doctor_recommendation,array('class'=>'form-control','rows=4','coloumns=30')) !!}
+									@else
+									  {!! Form::textarea('doctor_recommendation',$data[0]->doctor_recommendation,array('class'=>'form-control','rows=4','coloumns=30','disabled')) !!}
+									@endif
+							  @else
+									@if(isset($sub_type_entrypoint) && $sub_type_entrypoint == "entry_and_exit")
+							  		{!! Form::textarea('doctor_recommendation',null,array('class'=>'form-control')) !!}
+							  	@else
+										{!! Form::textarea('doctor_recommendation',null,array('class'=>'form-control','disabled')) !!}
+							  	@endif
+								@endif
+							  @if ($errors->has('doctor_recommendation'))<span class="help-block">{{$errors->first('doctor_recommendation')}}</span>@endif
 							</div>
 
 							<div class="form-group @if ($errors->has('final_diagnosis')) has-error @endif">

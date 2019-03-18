@@ -7,14 +7,15 @@
   <div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
+			<h1>
+        بيانات دخول مريض
+        <small>تحديث بيانات دخول مريض</small>
+      </h1>
       <ol class="breadcrumb">
         <li><a href="{{ url('/') }}"><i class="fa fa-dashboard"></i> الصفحة الرئيسية</a></li>
         <li class="active">تحديث بيانات دخول مريض</li>
       </ol>
-	  <h1>
-        بيانات دخول مريض
-        <small>تحديث بيانات دخول مريض</small>
-      </h1>
+	  
     </section>
 
     <!-- Main content -->
@@ -277,7 +278,7 @@
 					<!-- /.box-body -->
 
 				  <div class="box-footer">
-					<button type="button" class="btn btn-primary" onclick="$('#patient_form').submit();" >@if($data[0]->vid !="") تحديث @else تسجيل @endif</button>
+					<button type="button" class="btn btn-primary" onclick="$('.timepicker').removeAttr('disabled'); $('#datepicker2').removeAttr('disabled'); $('#patient_form').submit();" >@if($data[0]->vid !="") تحديث @else تسجيل @endif</button>
 				  </div>
 				{!! Form::close() !!}
 			  </div>
@@ -377,6 +378,10 @@ function isForteen(sid){
 	if($("#"+sid).val().length >= 14)
 		return false;
 	return true;
+}
+function removeDisabled(){
+	$('#datepicker2').removeAttr('disabled');
+	$('#entry_time').removeAttr('disabled');
 }
 </script>
 @endsection

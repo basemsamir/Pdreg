@@ -22,16 +22,24 @@
 <table class="table table-striped table-bordered " style="direction: rtl;" >
 	<tr >
 		<th>م</th>
-		<th>أسم العيادة</th>
-		<th>عدد حالات العيادة</th>
+		<th>أسم {{ $medical_type == 'c'?'العيادة':'القسم' }}</th>
+		<th>عدد حالات {{ $medical_type == 'c'?'العيادة':'القسم' }}</th>
 	</tr>
+	<?php $total=0; ?>
 	@foreach($data as $row)
 	<tr>
 		<td>{{$i++}}</td>
 		<td>{{$row->name}}</td>
 		<td>{{$row->numberOfVisits}}</td>
 	</tr>
+	<?php $total+=$row->numberOfVisits; ?>
 	@endforeach
+	@if(count($data)>1)
+	<tr>
+		<th colspan="2">الأجمالي</th>
+		<th>{{$total }} </th>
+	</tr>
+	@endif
 </table>
 
 @else

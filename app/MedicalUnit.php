@@ -13,6 +13,12 @@ class MedicalUnit extends Model
      	'name',
 		'type'
 	];
+
+	public function scopeGetAllMedicalUnits($query,$type)
+	{
+		# code...
+		return $query->where('type', $type);
+	}
 	public function visits(){
 	
 		return $this->belongsToMany('App\Visit')->withPivot('convert_to', 'department_conversion')->withTimestamps();

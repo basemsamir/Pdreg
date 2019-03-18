@@ -44,18 +44,53 @@
       <!-- sidebar menu: : style can be found in sidebar.less -->
       <ul class="sidebar-menu">
         <li class="header">القائمة الرئيسية</li>
+
+				@if($role_name =='Pharmacist' || $role_name =='Radiology Tech')
+					<li class="active">
+						<a href='#'>
+							@if($role_name =='Pharmacist')
+								<span><b>أدوية تذكرة المريض</b></span> <i class="fa fa-medkit"></i>
+							@elseif($role_name =='Radiology Tech')
+								<span><b>أشعة تذكرة المريض</b></span> <i class="fa fa-medkit"></i>
+ 							@endif
+						</a>
+					</li>
+				@else
 		@if($role_name =='Doctor')
 			@if($medicalunits)
 				@foreach($medicalunits as $row)
-					@if(Request::segment(2) == $row->id)
-						<li class="active">
-					@else
-						<li>
-					@endif
-						  <a href='{{url("visits/$row->id")}}'>
-							<span><b>{{ $row->type=='c'?' عيادة '.$row->name:' قسم '.$row->name }}</b></span> <i class="fa fa-medkit"></i>
-						  </a>
-						</li>
+						@if($row->type=='c')
+							@if(Request::segment(2) == $row->id && Request::segment(3) != 1)
+							<li class="active">
+							@else
+							<li>
+							@endif
+								<a href='{{url("visit/$row->id/-1")}}'>
+									<span><b>{{ ' عيادة '.$row->name }}</b></span> <i class="fa fa-medkit"></i>
+								</a>
+ 							</li>
+							
+							@if(Request::segment(2) == $row->id && Request::segment(3) == 1)
+							<li class="active">
+							@else
+							<li>
+							@endif
+								<a href='{{url("visit/$row->id/1")}}'>
+									<span><b>{{ ' استقبال '.$row->name }}</b></span> <i class="fa fa-medkit"></i>
+								</a>
+							</li>
+						@else
+							@if(Request::segment(2) == $row->id)
+							<li class="active">
+							@else
+							<li>
+							@endif
+							<a href='{{url("visit/$row->id/-1")}}'>
+								<span><b>{{' قسم '.$row->name }}</b></span> <i class="fa fa-medkit"></i>
+							</a>
+							</li>
+						@endif
+					
 				@endforeach
 				<li class=" {{ isset($s_active)? $s_active:'' }} ">
 					  <a href="{{url('visits/patient/show')}}" >
@@ -141,7 +176,7 @@
 				<span><b>دليل المرضى</b></span> <i class="fa fa-book"></i>
 			</a>
 		</li>
-		<li class="treeview {{ isset($r1_active) || isset($r2_active) || isset($r3_active) || isset($r4_active) || isset($r5_active) || isset($r6_active) || isset($r7_active) || isset($r8_active) || isset($r9_active) || isset($r10_active) || isset($r11_active)? 'active':'' }}">
+		<li class="treeview {{ isset($r1_active) || isset($r2_active) || isset($r3_active) || isset($r4_active) || isset($r5_active) || isset($r6_active) || isset($r7_active) || isset($r8_active) || isset($r9_active) || isset($r10_active) || isset($r11_active) || isset($r12_active) || isset($r13_active)? 'active':'' }}">
 			<a href="#">
 				<span><b>تقارير</b></span>
 				<span class="pull-right-container">
@@ -162,10 +197,12 @@
 				<ul class="treeview-menu">
 					@if($entrypoints_header)
 						@foreach($entrypoints_header as $row)
-							@if($row->type == 1)
-							<li>
-								<a target="_blank" href='{{url("admin/visitstoday/$row->id")}}'><b>تقرير {{ $row->name }}  اليوم</b><i class="fa fa-print"></i></a>
-							</li>
+ 							@if($row->users()->count())
+								@if($row->type == 1)
+								<li>
+									<a target="_blank" href='{{url("admin/visitstoday/$row->id")}}'><b>تقرير {{ $row->name }}  اليوم</b><i class="fa fa-print"></i></a>
+								</li>
+								@endif
 							@endif
 						@endforeach
 					@endif
@@ -190,10 +227,12 @@
 				<ul class="treeview-menu">
 					@if($entrypoints_header)
 						@foreach($entrypoints_header as $row)
-							@if($row->type == 3)
-							<li>
-								<a target="_blank" href='{{url("admin/visitstoday/$row->id")}}'><b>تقرير {{ $row->name }}  اليوم</b><i class="fa fa-print"></i></a>
-							</li>
+							@if($row->users()->count())
+								@if($row->type == 3)
+								<li>
+									<a target="_blank" href='{{url("admin/visitstoday/$row->id")}}'><b>تقرير {{ $row->name }}  اليوم</b><i class="fa fa-print"></i></a>
+								</li>
+								@endif
 							@endif
 						@endforeach
 					@endif
@@ -206,7 +245,7 @@
 				</ul>
 
 			  </li>
-			   <li class="treeview {{ isset($r4_active) || isset($r3_active)? 'active':'' }}">
+			  <li class="treeview {{ (isset($r4_active) || isset($r3_active) || isset($r12_active) || isset($r13_active)) ? 'active':'' }}">
 				<a href="#">
 					<span><b>تقارير العيادات</b></span>
 					<span class="pull-right-container">
@@ -216,11 +255,17 @@
 				</a>
 				<ul class="treeview-menu">
 					<li class=" {{ isset($r4_active)? 'active':'' }} " >
-					  <a  target="_blank" href='{{url("admin/print_total_patients_today")}}'><b>تقرير إجمالي عدد الحالات اليوم</b><i class="fa fa-print"></i></a>
-				    </li>
-				    <li class=" {{ isset($r3_active)? 'active':'' }} " >
-					  <a href='{{url("admin/total_patients_period")}}'><b>تقرير إجمالي عدد الحالات خلال فترة</b><i class="fa fa-circle-o"></i></a>
-				    </li>
+					  <a  target="_blank" href='{{url("admin/print_total_patients_today")}}'><b> إجمالي عدد الحالات اليوم</b><i class="fa fa-print"></i></a>
+				  </li>
+				  <li class=" {{ isset($r3_active)? 'active':'' }} " >
+					  <a href='{{url("admin/total_patients_period")}}'><b> إجمالي عدد الحالات خلال فترة</b><i class="fa fa-circle-o"></i></a>
+				  </li>
+					<li class=" {{ isset($r12_active)? 'active':'' }} " >
+					  <a href='{{url("admin/clinic_patients")}}'><b> حالات عيادة خلال فترة</b><i class="fa fa-circle-o"></i></a>
+				  </li>
+					<li class=" {{ isset($r13_active)? 'active':'' }} " >
+					  <a href='{{url("admin/total_dr_patients_period")}}'><b> عدد حالات طبيب عيادة خلال فترة</b><i class="fa fa-circle-o"></i></a>
+				  </li>
 				</ul>
 
 			  </li>
@@ -384,6 +429,7 @@
 				@endif
 			@endif <!-- End if $v_active -->
 		@endif <!-- End if $role_name == Admin -->
+		@endif <!-- End if $role_name == Pharmacist -->
       </ul>
     </section>
     <!-- /.sidebar -->

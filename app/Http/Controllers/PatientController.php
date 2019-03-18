@@ -16,6 +16,7 @@ use Auth;
 use DB;
 use Validator;
 use Session;
+
 use Carbon\Carbon;
 class PatientController extends Controller
 {
@@ -162,6 +163,7 @@ class PatientController extends Controller
 				'))
 				->join('medical_unit_visit','visits.id','=','medical_unit_visit.visit_id')
 				->where('visits.patient_id', $id)
+				->where('visits.cancelled',false)
 				->groupBy('visits.id')
 				->orderBy('visits.created_at','desc')
 				->get();
@@ -447,7 +449,7 @@ class PatientController extends Controller
 					else{
 						$visit->medicalunits()->attach($input['medical_id']);
 					}
-					$request->session()->flash('flash_message', "تم التسجيل بنجاح - كود المريض : $input[id] ");
+					$request->session()->flash('flash_message', "تم التسجيل بنجاح <br> كود المريض : $input[id] <br> تذكرة المريض: $input[ticket_num]");
 					$request->session()->flash('vid', $visit->id);
 				}
 			}
@@ -634,7 +636,7 @@ class PatientController extends Controller
 					$visit->medicalunits()->attach($input['medical_id']);
 				}
 				DB::commit();
-				$request->session()->flash('flash_message', "تم التسجيل بنجاح - كود المريض : $pid ");
+				$request->session()->flash('flash_message', "تم التسجيل بنجاح <br> كود المريض : $pid <br> تذكرة المريض: $input[ticket_num]");
 				$request->session()->flash('vid',$visit->id);
 			}
 			catch(\Exception $e){
@@ -726,7 +728,7 @@ class PatientController extends Controller
 						$messages['entry_date.date'] = 'هذا الحقل يجب أن يكون تاريخ';
 						$messages['entry_date.after'] = 'تاريخ الدخول يجب أن يكون أكبر من تاريخ التسجيل.';
 						
-						$constraints['entry_date']='date|after:reg_date';
+						$constraints['entry_date']='date|after_or_equal_date:reg_date';
 						$constraints['c_name']='required_with:c_sid|min:2|max:50';
 						$constraints['c_address']='min:2';
 						$constraints['c_job']='min:2';
@@ -812,7 +814,7 @@ class PatientController extends Controller
 
 						}
 						DB::commit();
-						$request->session()->flash('flash_message', "تم التسجيل بنجاح - كود المريض : $input[id] ");
+						$request->session()->flash('flash_message', "تم التسجيل بنجاح <br> كود المريض : $input[id] <br> تذكرة المريض : $visit_input_data[ticket_number]");
 						$request->session()->flash('vid', $visit->id);
 					}
 					catch(\Expection $e){
@@ -910,9 +912,9 @@ class PatientController extends Controller
 				$messages['file_number.unique'] = 'هذا الرقم موجود من قبل';
 				$messages['file_type.required'] = 'هذا الحقل مطلوب الأدخال';
 				$messages['entry_date.date'] = 'هذا الحقل يجب أن يكون تاريخ';
-				$messages['entry_date.after'] = 'تاريخ الدخول يجب أن يكون أكبر من تاريخ التسجيل.';
+				$messages['entry_date.after_or_equal_date'] = 'تاريخ الدخول يجب أن يكون أكبر من تاريخ التسجيل.';
 				
-				$constraints['entry_date']='date|after:reg_date';
+				$constraints['entry_date']='date|after_or_equal_date:reg_date';
 				$constraints['c_name']='required_with:c_sid|min:2|max:50';
 				$constraints['c_address']='min:2';
 				$constraints['c_job']='min:2';
@@ -1008,7 +1010,8 @@ class PatientController extends Controller
 				}
 				
 				DB::commit();
-				$request->session()->flash('flash_message', "تم التسجيل بنجاح - كود المريض : $pid ");
+				$request->session()->flash('flash_message', "تم التسجيل بنجاح <br> كود المريض : $pid <br> تذكرة المريض : $visit_input_data[ticket_number]");
+						
 				$request->session()->flash('vid',$visit->id);
 			}
 			catch(\Exception $e){
@@ -1024,18 +1027,27 @@ class PatientController extends Controller
 
 	public function show(Request $request)
 	{
-		$patients= Patient::orderBy('id', 'desc')->select('id','name','gender','sid','birthdate','created_at','address')->take(100)->get();
 
+		$patients= Patient::orderBy('id', 'desc')->select('id','name','gender','sid','birthdate','created_at','address')->take(100)->get();
 		$user=User::find(Auth::id());
-		$rolename=$user->role->name;
-		return view('show_patients',array('s_active'=>'active','role_name'=>$rolename,'table_header'=>'بيانات المرضي المضافة حديثا','data'=>$patients));
+		$role_name=$user->role->name;
+		$s_active = 'active';
+		$table_header = 'بيانات المرضي المضافة حديثا';
+		$data=$patients;
+		if($request->is("admin/show")){
+			$url = url("admin/show");
+		}
+		else{
+			$url = url("patients/show");
+		}
+		return view('show_patients',compact('s_active','role_name','table_header','data','url'));
 	}
 	public function search(Request $request)
 	{
 		// Restore session after it expired and user return to log in
-
-		$input=$request->all();
-		$patients= Patient::where(function($query) use ($input){
+	
+		$input = $request->all();
+		$data= Patient::where(function($query) use ($input){
 				if($input['name'] != "")
 					$query->where('name','like',"%$input[name]%");
 				if($input['code'] != "")
@@ -1047,9 +1059,11 @@ class PatientController extends Controller
 		})->orderBy('created_at', 'desc')->select('id','name','gender','sid','birthdate','created_at','address')->get();
 
 		$user=User::find(Auth::id());
-		$rolename=$user->role->name;
-
-		return view('show_patients',array('s_active'=>'active','role_name'=>$rolename,'table_header'=>'بيانات المرضي حسب نتيجة البحث','data'=>$patients));
+		$role_name=$user->role->name;
+		$s_active = 'active';
+		$table_header = 'بيانات المرضي حسب نتيجة البحث';
+		$url = url("patients/show");
+		return view('show_patients',compact('s_active','role_name','table_header','data','url'));
 	}
 	public function addvisit($id,$visit_id){
 		// Restore session after it expired and user return to log in
@@ -1273,78 +1287,52 @@ class PatientController extends Controller
 		$role_name=$user_row->role->name;
 		$medical_units=MedicalUnit::lists('name', 'id');
 		$desks=Entrypoint::where('type',3)->get();
-		$header=""; $medical_type="";
-
-		if($user_row['role_id']==4){
-			$header="بيانات المرضي الداخلي المضافة حديثا";$medical_type="d";
-		}
-		elseif($user_row['role_id']==5 || $user_row['role_id']==7){
-			$header="بيانات حجز كشف المرضي المضافة حديثا خلال شهر";$medical_type="c";
-		}
-		if($user_row['role_id']==4){
-			$visits = Visit::join('medical_unit_visit', 'visits.id', '=', 'medical_unit_visit.visit_id')
-					  ->join('medical_units','medical_unit_visit.medical_unit_id','=','medical_units.id')
-					  ->join('patients','patients.id','=','visits.patient_id')
-					  ->where('type',$medical_type)
-					  ->where('closed',false)
-					  ->where('cancelled',false)
-					  ->select('patients.id','patients.name','patients.gender','patients.sid','medical_units.name as dept_name','visits.id as visit_id','visits.created_at','ticket_type','visits.closed','visits.updated_at')
-					  ->orderBy('visits.id', 'desc')
-					  ->orderBy('medical_unit_visit.created_at', 'desc')->take(100)->get();
-		}
-		else{
-			$sub_type_entrypoint=$user_row->entrypoints()->first()->sub_type;
-
-			$visits = Visit::join('medical_unit_visit', 'visits.id', '=', 'medical_unit_visit.visit_id')
-					  ->join('medical_units','medical_unit_visit.medical_unit_id','=','medical_units.id')
-					  ->join('patients','patients.id','=','visits.patient_id')
-					  ->where('type',$medical_type)
-					  ->where('cancelled',false)
-				      ->whereNull('convert_to')
-					  ->where(function($query) use($eid){
-						  $query->where('entry_id',$eid)
-						        ->orWhere('convert_to_entry_id',$eid);
-					  })
-					  ->whereBetween('visits.created_at',[Carbon::today()->subMonth()->format('Y-m-d'),Carbon::tomorrow()->format('Y-m-d')])
-					  ->select('patients.id','patients.name','patients.gender','patients.sid','medical_units.name as dept_name','visits.id as visit_id','visits.ticket_number','ticket_type','convert_to_entry_id','visits.created_at','visits.closed','visits.registration_datetime')
-					  ->orderBy('visits.id', 'desc')
-					  ->orderBy('medical_unit_visit.created_at', 'desc')
-					   
-					  ->get();
-		}
+		$header="بيانات حجز كشف المرضي المضافة حديثا خلال شهر";
+		$medical_type="c";
+		$sub_type_entrypoint=$user_row->entrypoints()->first()->sub_type;
+		$visits = Visit::with(array('patient','medicalunits'=>function($query){
+							$query->orderBy('pivot_created_at','asc');	
+						}))
+						->whereHas('medicalunits',function($query) use($medical_type){
+							$query->where('type',$medical_type);
+						})
+						->where('cancelled',false)
+						->where(function($query) use($eid){
+							$query->where('entry_id',$eid)
+								->orWhere('convert_to_entry_id',$eid);
+						})
+						->whereBetween('visits.created_at',[Carbon::today()->subMonth()->format('Y-m-d'),Carbon::tomorrow()->format('Y-m-d')])
+						->orderBy('id','desc')
+						->orderBy('created_at','desc')
+						->get();
 		return view('show_visits',array('sv_active'=>'active','table_header'=>$header,'data'=>$visits,'medicalunits'=>$medical_units,'role_name'=>$role_name,'desks'=>$desks,'sub_type_entrypoint'=>$sub_type_entrypoint));
 	}
 
 	public function showinpatientvisits()
 	{
-			$user=User::find(Auth::id());
-			$table_header="بيانات مرضي الدخول المضافة حديثا";
-			$medical_type="d";
-			$ip_active='active';
-			$role_name=$user->role->name;
-			$sub_type_entrypoint=$user->entrypoints()->first()->sub_type;
-			// This condition for reception who inserting inpatient data with his/her ticket in clinic reservation
-			if($role_name != 'Entrypoint')
-				$ticket_and_entry='true';
-			$data = Visit::join('medical_unit_visit', 'visits.id', '=', 'medical_unit_visit.visit_id')
-						->join('medical_units','medical_unit_visit.medical_unit_id','=','medical_units.id')
-						->join('patients','patients.id','=','visits.patient_id')
-						->leftJoin('cure_types','cure_types.id','=','visits.cure_type_id')
-						->where('type','d')
+		$user=User::find(Auth::id());
+		$table_header="بيانات مرضي الدخول المضافة حديثا";
+		$medical_type="d";
+		$ip_active='active';
+		$role_name=$user->role->name;
+		$sub_type_entrypoint=$user->entrypoints()->first()->sub_type;
+		// This condition for reception who inserting inpatient data with his/her ticket in clinic reservation
+		if($role_name != 'Entrypoint')
+			$ticket_and_entry='true';
+		$data= Visit::with(array('cure_type','patient','medicalunits'=>function($query){
+							$query->orderBy('pivot_created_at', 'desc');
+						}))
+						->whereHas('medicalunits',function($query) use($medical_type){
+							$query->where('type',$medical_type);
+						})
 						->where('cancelled',false)
 						->where(function($query) use($role_name){
 							if($role_name == "Receiption")
-								$query->where('visits.user_id',Auth::id());
+								$query->where('user_id',Auth::id());
 						})
-						->select('patients.id','patients.name','patients.gender','patients.sid',
-						'medical_units.name as dept_name', 'ticket_number','ticket_type','entry_time', 'c_name','visits.sid as c_sid',
-						'visits.id as visit_id','entry_date','room_number','contract','cure_types.name as cure_type_name','file_number',
-						'visits.closed','visits.created_at','visits.final_diagnosis as fd','exit_date as ed')
-						->orderBy('visits.id', 'desc')
-						->orderBy('medical_unit_visit.created_at', 'desc')->take(100)->get();
-
-			return view('show_visits',compact('ip_active','table_header','data','role_name','ticket_and_entry','sub_type_entrypoint'));
-
+						->orderBy('id', 'desc')
+						->take(100)->get();			
+		return view('show_visits',compact('ip_active','table_header','data','role_name','ticket_and_entry','sub_type_entrypoint'));
 	}
 
 	public function exitvisit($id,$visit_id)
@@ -1356,10 +1344,12 @@ class PatientController extends Controller
 				  ->where('visits.id','=',$visit_id)
 				  ->where('patients.id','=',$id)
 				  ->where('type','=','d')
-				  ->select('patients.id as id','patients.sid as sid','visits.id as vid','patients.name as name','medical_units.name as mname','users.name as uname','entry_date','exit_date','final_diagnosis','exit_status')
+				  ->select('patients.id as id','patients.sid as sid','visits.id as vid','patients.name as name','medical_units.name as mname','users.name as uname','entry_date','exit_date','final_diagnosis','exit_status','doctor_recommendation')
 				  ->get();
 				 // dd($visit_id);
-		return view('exit_patient',array('s_active'=>'active','data'=>$patient_data));
+		$user = User::find(Auth::id());
+		$sub_type_entrypoint=$user->entrypoints()->first()->sub_type;
+		return view('exit_patient',array('s_active'=>'active','data'=>$patient_data,'sub_type_entrypoint'=>$sub_type_entrypoint));
 	}
 
 	public function storeexitvisit($id,$visit_id,Request $request)
@@ -1389,6 +1379,8 @@ class PatientController extends Controller
 		$visit_data->exit_status=$input['exit_condition'];
 		$visit_data->exit_date=$input['exit_time'];
 		$visit_data->final_diagnosis=$input['final_diagnosis'];
+		if(isset($input['doctor_recommendation']))
+			$visit_data->doctor_recommendation=$input['doctor_recommendation'];
 		$visit_data->closed=1;
 		DB::beginTransaction();
 		$visit_data->save();
@@ -1414,6 +1406,15 @@ class PatientController extends Controller
 		$patients= Patient::where('id',$request->get('pid'))->select('id','sid','name','birthdate','gender','address','job','social_status','phone_num')->get();
 		if(count($patients) > 0)
 			return response()->json(['success' => 'true','data'=>$patients]);
+		else
+			return response()->json(['success' => 'false']);
+	}
+	public function checkExistName(Request $request){
+		$patients= Patient::where('name','like','%'.$request->get('name').'%')
+						 ->select('id','name','address','birthdate')
+						 ->get();
+		if(count($patients) > 0)
+			return response()->json(['success' => 'true','patients'=>$patients]);
 		else
 			return response()->json(['success' => 'false']);
 	}

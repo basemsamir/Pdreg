@@ -15,7 +15,7 @@
 		}
     ul{
       list-style: none;
-      margin-top: 120px;
+      margin-top: 150px;
       float: right;
       margin-right: 150px;
     }

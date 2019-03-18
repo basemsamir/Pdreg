@@ -8,13 +8,14 @@
   <div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
+			<h1>
+        تقرير مكاتب الأستقبال خلال فترة
+      </h1>
       <ol class="breadcrumb">
         <li><a href="{{ url('admin') }}"><i class="fa fa-dashboard"></i> الصفحة الرئيسية</a></li>
         <li class="active">تقرير مكاتب الأستقبال خلال فترة</li>
       </ol>
-	  <h1>
-        تقرير مكاتب الأستقبال خلال فترة
-      </h1>
+	  
     </section>
 
     <!-- Main content -->
@@ -43,7 +44,7 @@
 							<button type="submit" value="show_only" name="submit" class="btn btn-primary"><i class="fa fa-search"></i> عرض النتائج </button>
 						</div>
 						<div class="form-group">
-							<a href="{{ url('admin/print_desk') }}" target="_blank" class="btn btn-success @if(!Session::has('receiptionists') && !Session::has('receiptionist')) disabled @endif "><i class="fa fa-print"></i> طباعة التقرير </a>
+							<a href="{{ url('admin/print_desk') }}" target="_blank" class="btn btn-success @if(!Session::has('print')) disabled @endif "><i class="fa fa-print"></i> طباعة التقرير </a>
 							<div class="form-group">
 								<button type="submit" value="reload" name="submit" class="btn btn-info"><i class="fa fa-search"></i> بحث جديد </button>
 							</div>
@@ -123,12 +124,17 @@
 											<td>{{$row->ticket_number}}</td>
 											<td>{{$row->ticket_type=="G"?'استقبال عام':'استقبال اصابات'}}</td>
 										  <td>{{$row->registration_datetime}}</td>
-										  <td>{{$row->name}}</td>
-										  <td>{{$row->gender=='M'?'ذكر':'أنثي'}}</td>
-										  <td>{{ calculateAge($row->birthdate)}}</td>
-										  <td>{{$row->all_deps?'إستكشاف طاريء':$row->dept_name}}
+										  <td>{{$row->patient->name}}</td>
+										  <td>{{$row->patient->gender=='M'?'ذكر':'أنثي'}}</td>
+										  <td>{{ calculateAge($row->patient->birthdate)}}</td>
+										  <td>
+													@if($row->all_deps)
+														إستكشاف طاريء
+													@else
+														{{ $row->medicalunits[0]->name}}
+													@endif
 											<?php $all_deps=$row->all_deps;?></td>
-										  <td>{{$row->user_name}}</td>
+										  <td>{{$row->user->name}}</td>
 
 										</tr>
 										@endforeach

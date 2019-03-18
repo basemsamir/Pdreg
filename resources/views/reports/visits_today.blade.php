@@ -15,14 +15,14 @@
 	</style>
 </head>
 <body onload="window.print()">
-<h3 align ="center"><b>{!! $table_header !!}</b></h3>
-@if(count($data) && isset($numberOfVisits) && $numberOfVisits > 0)
+<h3 align ="center" style="direction: rtl;"><b>{!! $table_header !!}</b></h3>
+@if(count($data) || (isset($numberOfVisits) && $numberOfVisits > 0))
   <?php $all_deps=false;?>
   @foreach($data as $visits_row)
     
     @if(count($visits_row) > 0)
 		@if(!isset($role_name))
-			<h4 align ="center"><b>أسم مدخل البيان : {{ $visits_row[0]->user_name }}</b></h4>
+			<h4 align ="center"><b>أسم مدخل البيان : {{ $visits_row[0]->user->name }}</b></h4>
 		@endif
     <table class="table table-striped table-bordered " style="direction: rtl;" >
   	    <tr>
@@ -56,10 +56,10 @@
 	      @endif
       	</tr>
       	@foreach($visits_row as $row)
-        @if( $all_deps )
-          <?php $all_deps=$row->all_deps;?>
-          @continue
-        @endif
+          @if( $all_deps )
+            <?php $all_deps=$row->all_deps;?>
+            @continue
+          @endif
       	<tr>
           @if(isset($role_name) && ($role_name == "Desk" || $role_name=="SubAdmin"|| $role_name=="Admin"))
              <td>{{$row->serial_number}}</td>
@@ -76,14 +76,18 @@
           @if(isset($role_name) && ($role_name == "Desk" || $role_name=="SubAdmin"|| $role_name=="Admin"))
             <td>{{$row->registration_datetime}}</td>
           @endif
-      		<td>{{$row->name}}</td>
-      		<td>{{$row->gender=='M'?'ذكر':'أنثى'}}</td>
-      		<td> {{ calculateAge($row->birthdate) }}</td>
+      		<td>{{$row->patient->name}}</td>
+      		<td>{{$row->patient->gender=='M'?'ذكر':'أنثى'}}</td>
+      		<td> {{ calculateAge($row->patient->birthdate) }}</td>
           @if(isset($role_name) && !($role_name == "Desk" || $role_name=="SubAdmin"|| $role_name=="Admin"))
-            <td>{{$row->address}}</td>
+            <td>{{$row->patient->address}}</td>
           @endif
       		<td>
-          {{$row->all_deps?'إستكشاف طاريء': $row->dept_name}}
+          	@if($row->all_deps)
+              إستكشاف طاريء
+            @else
+              {{ $row->medicalunits[0]->name }}
+            @endif
           <?php $all_deps=$row->all_deps;?>
           </td>
           @if(!isset($today_date))

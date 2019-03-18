@@ -8,6 +8,7 @@ use App\VisitDiagnose;
 use App\VisitComplaint;
 use App\MedicalDevice;
 use App\VisitMedicine;
+use App\MedicalOrderItem;
 use App\Visit;
 use DB;
 use App\MedicalUnit;
@@ -18,7 +19,7 @@ class AjaxVisitController extends Controller
 	public function checkVisitDiagnoses(Request $request){
 		if($request->ajax()){
 			$diagnoses= VisitDiagnose::join('users','users.id','=','typist_id')
-									 ->select('content','users.name','content_in_english','cure_description','accessories',DB::raw('date(visit_diagnoses.created_at) as created_at'))
+									 ->select('visit_diagnoses.id','content','users.name','content_in_english','cure_description','accessories',DB::raw('date(visit_diagnoses.created_at) as created_at'))
 									 ->where(array('visit_id'=>$request->get('visit_id')))->get();
 			if(count($diagnoses) > 0)
 				return response()->json(['success' => 'true','data'=>$diagnoses]);
@@ -56,14 +57,27 @@ class AjaxVisitController extends Controller
 	
 	public function ajaxGetVisitRadiology(Request $request){
 		if($request->ajax()){
-			$radiologies= Visit::join('medical_order_items','medical_order_items.visit_id','=','visits.id')
+			// If we add proc ids to devices
+			$new_one_rads= Visit::join('medical_order_items','medical_order_items.visit_id','=','visits.id')
 							 ->join('procedures','procedures.id','=','medical_order_items.proc_id')
 							 ->join('users','users.id','=','medical_order_items.doctor_id')
 							 ->join('medical_devices','medical_devices.id','=','procedures.device_id')
-							 ->select('medical_devices.name as dev_name','procedures.name as proc_name','users.name as u_name')
-							 ->where('visit_id',$request->get('visit_id'))->get();
-			if(count($radiologies) > 0)
-				return response()->json(['success' => 'true','data'=>$radiologies]);
+							 ->select('medical_order_items.id','medical_devices.name as dev_name','procedures.name as proc_name','users.name as u_name')
+							 ->where('visit_id',$request->get('visit_id'))
+							 ->where('old_format',false)
+							 ->get();
+			// Current state old format; we insert proc name 
+			$old_one_rads= Visit::join('medical_order_items','medical_order_items.visit_id','=','visits.id')
+							 ->join('users','users.id','=','medical_order_items.doctor_id')
+							 ->select('medical_order_items.id',DB::raw('"جهاز الأشعة" as dev_name'),'proc_name','users.name as u_name')
+							 ->where('visit_id',$request->get('visit_id'))
+							 ->where('old_format',true)
+							 ->get();
+							 
+			$merged = array($new_one_rads,$old_one_rads);
+			
+			if(count($merged) > 0)
+				return response()->json(['success' => 'true','data'=>$merged]);
 			else
 				return response()->json(['success' => 'false']);
 		}
@@ -74,7 +88,7 @@ class AjaxVisitController extends Controller
 	public function ajaxGetVisitMedicine(Request $request){
 		if($request->ajax()){
 			$medicines= VisitMedicine::join('users','users.id','=','typist_id')
-										->select('visit_medicines.name','accessories','users.name as username','visit_medicines.created_at')
+										->select('visit_id','visit_medicines.id','visit_medicines.name', DB::raw('IFNULL(accessories,"") as accessories'),'users.name as username','visit_medicines.created_at')
 										->where(array('visit_id'=>$request->get('visit_id')))->get();
 			if(count($medicines) > 0)
 				return response()->json(['success' => 'true','data'=>$medicines]);
@@ -183,5 +197,36 @@ class AjaxVisitController extends Controller
 		
 		
 	}
-	
+
+	//////////////////////////////////////////
+	public function ajaxRemoveTicketMedicine(Request $request){
+		if($request->ajax()){	
+			$input = $request->all();	
+			if(!isset($input['department']))
+				VisitMedicine::find($input['id'])->delete();
+			else{
+				VisitDiagnose::find($input['id'])->update(
+					array('cure_description' => '',
+							'accessories' => ''
+					)
+				);
+			}
+			return response()->json(['success' => 'true']);
+		}
+		else{
+			return response()->json(['success' => 'false']);
+		}
+	}
+
+	//////////////////////////////////////////
+	public function ajaxRemoveTicketRadiology(Request $request){
+		if($request->ajax()){	
+			$input = $request->all();	
+			MedicalOrderItem::find($input['id'])->delete();
+			return response()->json(['success' => 'true']);
+		}
+		else{
+			return response()->json(['success' => 'false']);
+		}
+	}
 }

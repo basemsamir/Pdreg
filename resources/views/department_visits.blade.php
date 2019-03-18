@@ -8,13 +8,14 @@
   <div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
+	  <h1>
+        {{$medicalunit['type']=='c'? 'زيارات عيادة': 'مرضي قسم'}} {{ $medicalunit['name'] }} {{$medicalunit['type']=='c'? 'اليوم': 'الداخلي'}}
+      </h1>
       <ol class="breadcrumb">
         <li><a href="#"><i class="fa fa-dashboard"></i> الصفحة الرئيسية</a></li>
         <li class="active">{{$medicalunit['type']=='c'?'عيادة':'قسم'}} {{$medicalunit['name'] }}</li>
       </ol>
-	  <h1>
-        {{$medicalunit['type']=='c'? 'زيارات عيادة': 'مرضي قسم'}} {{ $medicalunit['name'] }} {{$medicalunit['type']=='c'? 'اليوم': 'الداخلي'}}
-      </h1>
+	  
     </section>
 
     <!-- Main content -->
@@ -24,10 +25,7 @@
       <div class="row">
         <div class="col-lg-12 col-xs-24">
           <!-- small box -->
-			  <div class="box box-primary" dir="rtl">
-				<div class="box-header with-border">
-				  <h3 class="box-title"></h3>
-				</div>
+			<div class="box box-primary" dir="rtl">
 				<!-- /.box-header -->
 				<div class="box-body">
 					@if($errors->any())
@@ -48,33 +46,7 @@
 					@endif
 					<div class="alert" id="successMessages" style="display: none"></div>
 					<div class="row">
-						<div class="col-lg-5">
-							<div id="overlay2"></div>
-							<table id="p_datatable" class="table table-bordered table-hover">
-								<thead>
-								<tr>
-								  <th style="text-align:center">كود المريض</th>
-								  <th style="text-align:center">أسم المريض</th>
-								  <th style="text-align:center">تحديد</th>
-								  <th style="text-align:center">سجل المريض</th>
-								</tr>
-								</thead>
-								<tbody>
-								<?php $i=0;?>
-								@foreach($visits as $row)
-								<tr id="row{{$i}}" >
-								  <td>{{$row->id}}</td>
-								  <td>{{$row->name}}</td>
-								  <td><a nohref onclick="showVisitData({{$i++}},{{$row->visit_id}});" class="btn btn-primary"><i class="fa fa-plus"></i></a></td>
-								  <td><a href='{{ url("/visits/printhistory/$row->id") }}'  target="_blank" class="btn btn-info"><i class="fa fa-print"></i></a></td>
-
-								</tr>
-								@endforeach
-								</tbody>
-							</table>
-						</div> <!-- ./col-lg-4 -->
-
-						<div class="col-lg-7">
+						<div class="col-md-7" style="padding-bottom: 10px">
 							<ul class="nav nav-tabs" style="padding-right:0">
 
 							  <li class="active pull-right"><a data-toggle="tab" href="#home">
@@ -83,7 +55,7 @@
 							  <li class="pull-right"><a data-toggle="tab" href="#medicine">الأدوية</a></li>
 							  @endif
 							  <!--<li class="pull-right" ><a data-toggle="tab" href="#history">سجل المريض</a></li> -->
-							  <li class="pull-right" style="display: none" ><a data-toggle="tab" href="#xrays">الأشعة</a></li>
+							  <li class="pull-right" ><a data-toggle="tab" href="#xrays">الأشعة</a></li>
 							  @if($medicalunit['type']=='c')
 								<li class="pull-right"><a data-toggle="tab" href="#conversion_clinic">التحويل الي عيادة أخري</a></li>
 								<li class="pull-right"><a data-toggle="tab" href="#conversion_department">التحويل الي القسم الداخلي</a></li>
@@ -175,8 +147,9 @@
 											<tr>
 												<th style="text-align:center">العلاج</th>
 												<th style="text-align:center">المستلزمات</th>
-                        <th style="text-align:center">تاريخ التسجيل</th>
-                        <th style="text-align:center">أسم المسجل</th>
+												<th style="text-align:center">تاريخ التسجيل</th>
+												<th style="text-align:center">أسم المسجل</th>
+												<th style="text-align:center">حذف</th>
 											</tr>
 											</thead>
 											<tbody>
@@ -252,6 +225,7 @@
 											  <th style="text-align:center">المستلزمات</th>
 											  <th style="text-align:center">تاريخ التسجيل</th>
 											  <th style="text-align:center">أسم المسجل</th>
+											  <th style="text-align:center">حذف</th>
 											</tr>
 											</thead>
 											<tbody>
@@ -263,7 +237,7 @@
 							  {!! Form::close(); !!}
 							  </div>
 							  <div id="xrays" class="tab-pane fade">
-								{!! Form::open(array('class'=>'form','method' => 'POST','name'=>'patient_form','onsubmit'=>
+								{!! Form::open(array('class'=>'form','method' => 'POST','id'=>'xray_form','onsubmit'=>
 												'$("#submitXray").attr("disabled",true)')) !!}
 								<div class="form-group" >
 									<div class="row">
@@ -282,8 +256,10 @@
 									{!! Form::select('device',$devices,null,['id'=>'device','class' => 'form-control']); !!}
 								</div>
 								<div class="form-group" >
-									{!! Form::label('نوع الفحص',null) !!}
-									{!! Form::select('procedure',$proc,null,['id'=>'procedure_name','class'=>'form-control']) !!}
+									{!! Form::label('الفحص',null) !!}
+									{!! Form::text('proc_name',NULL,array('id'=>'proc_name','class'=>'form-control')) !!}
+									{!! Form::hidden('proc_id',1) !!}
+									{!! Form::hidden('old_format',true) !!}
 									{!! Form::hidden('dep',$dep,array('id'=>'dep_id')) !!}
 									{!! Form::hidden('visit',null,array('id'=>'xvisit')) !!}
 									{!! Form::hidden('formID',2) !!}
@@ -295,8 +271,9 @@
 											<tr>
 											  <th style="text-align:center">#</th>
 											  <th style="text-align:center">أسم الجهاز</th>
-											  <th style="text-align:center">نوع الفحص</th>
+											  <th style="text-align:center">الفحص</th>
 											  <th style="text-align:center">أسم المسجل</th>
+											  <th style="text-align:center">الغاء</th>
 											</tr>
 											</thead>
 											<tbody>
@@ -304,8 +281,8 @@
 										</table>
 									</div>
 								</div>
-								<button type="submit" id="submitXray" class="btn btn-primary" onclick=" $('#overlay').show();">طلب أشعة</button>
-							  {!! Form::close(); !!}
+								<a id="submitXray" class="btn btn-primary" onclick=" $('#overlay').show();">طلب أشعة</a>
+								{!! Form::close(); !!}
 							  </div>
 
 
@@ -364,17 +341,47 @@
 								<div class="form-group" >
 									{!! Form::label('التوصية',null) !!}
 									{!! Form::textarea('dr_recommendation',NULL,array('rows'=>'3','id'=>'dr_recommendation','class'=>'form-control')) !!}
-									{!! Form::hidden('visit',null,array('id'=>'dvisit')) !!}
+									{!! Form::hidden('visit',null,array('id'=>'rvisit')) !!}
 									{!! Form::hidden('formID',6) !!}
 								</div>
-								<a href="#" id="submitRecommendation" class="btn btn-primary">تسجيل</a>
+								<a id="submitRecommendation" class="btn btn-primary" onclick=" $('#overlay').show();">تسجيل</a>
+							
 								{!! Form::close(); !!}
 							  </div>
 							  @endif
 							</div>
-						</div> <!-- ./col-lg-12 -->
+							
+						
+						</div> <!-- ./col-lg-7 -->
+						
+						<div class="col-md-5">
+							<div id="overlay2"></div>
+							<table id="p_datatable" class="table table-bordered table-hover">
+								<thead>
+								<tr>
+								  <th style="text-align:center">كود المريض</th>
+								  <th style="text-align:center">أسم المريض</th>
+								  <th style="text-align:center">تحديد</th>
+								  <th style="text-align:center">سجل المريض</th>
+								</tr>
+								</thead>
+								<tbody>
+								<?php $i=0;?>
+								@foreach($visits as $row)
+								<tr id="row{{$i}}" >
+								  <td>{{$row->id}}</td>
+								  <td>{{$row->name}}</td>
+								  <td><a nohref onclick="showVisitData({{$i++}},{{$row->visit_id}});" class="btn btn-primary"><i class="fa fa-plus"></i></a></td>
+								  <td><a href='{{ url("/visits/printhistory/$row->id") }}'  target="_blank" class="btn btn-info"><i class="fa fa-print"></i></a></td>
+
+								</tr>
+								@endforeach
+								</tbody>
+							</table>
+						</div> <!-- ./col-lg-5 -->
+						
 					</div> <!-- ./row -->
-			  </div>
+			  	</div>
             <!-- ./box -->
         </div>
         <!-- ./col -->
@@ -383,7 +390,7 @@
     </section>
     <!-- /.content -->
   </div>
-
+	<?php $desk = Request::segment(3); ?>
 @endsection
 @section('javascript')
   <script>
@@ -407,7 +414,7 @@
 			alert("من فضلك اختر المريض");
 			return false;
 		}
-		var url = "{{ url('visits/1') }}";
+		var url = '{{ url("visit/$medicalunit[id]/$desk") }}';
 
 		$.ajax({
 			url:url,
@@ -440,7 +447,7 @@
 		});
 	});
 	$("#submitMedicine").click(function(){
-		var url = "{{ url('visits/1') }}";
+		var url = '{{ url("visit/$medicalunit[id]/$desk") }}';
 
 		$.ajax({
 			url:url,
@@ -468,8 +475,36 @@
 			}
 		});
 	});
+	$("#submitXray").click(function(){
+		var url = '{{ url("visit/$medicalunit[id]/$desk") }}';
+
+		$.ajax({
+			url:url,
+			type:'post',
+			data:$('#xray_form').serialize(),
+			dataType: "json",
+			success: function(data){
+				if(data['success'] == "true")
+				{
+					$("#successMessages").removeClass('alert-danger');
+					$("#successMessages").show();
+					$("#successMessages").addClass('alert-success');
+					$("#successMessages").html("<b>"+data['messages']+"</b>");
+         			$("#proc_name").val("");
+					restorePatientData(global_row_id);
+				}
+				else{
+					$("#successMessages").removeClass('alert-success');
+					$("#successMessages").show();
+					$("#successMessages").addClass('alert-danger');
+					for(error in data['messages'])
+						$("#successMessages").append("<p><b>"+data['messages'][error]+"</b></p>");
+				}
+			}
+		});
+	});
 	$("#submitRecommendation").click(function(){
-		var url = "{{ url('visits/1') }}";
+		var url = '{{ url("visit/$medicalunit[id]/$desk") }}';
 
 		$.ajax({
 			url:url,
@@ -510,6 +545,7 @@
 		var availableDiagnoses = [];
 		var availableComplaints = [];
 		var availableMedicines = [];
+
 		//Get all diagnoses
 		var url = "{{ url('visits/getAllDiagnoses') }}";
 		$.ajax({
@@ -690,6 +726,7 @@
 		$("#cvisit").val(vid);
 		$("#dvisit").val(vid);
 		$("#mvisit").val(vid);
+		$("#rvisit").val(vid);
 		$('.diagnose-table tr:gt(0)').remove();
 		$('.complaints-table tr:gt(0)').remove();
 		$('.medicine-table tr:gt(0)').remove();
@@ -723,8 +760,13 @@
 					$('.diagnose-table').append('<tr><td>'+data['data'][i].content+
 					'<td>'+data['data'][i].content_in_english+
 					'</td><td>'+data['data'][i].created_at.split(" ")[0]+'</td><td>'+data['data'][i].name+'</td></tr>');
-					$('.cure-table').append('<tr><td>'+data['data'][i].cure_description+
-					'</td><td>'+data['data'][i].accessories+'</td><td>'+data['data'][i].created_at.split(" ")[0]+'</td><td>'+data['data'][i].name+'</td></tr>');
+					
+					if(data['data'][i].cure_description != ""){
+						$('.cure-table').append('<tr><td>'+data['data'][i].cure_description+
+						'</td><td>'+data['data'][i].accessories+'</td><td>'+data['data'][i].created_at.split(" ")[0]+'</td><td>'+data['data'][i].name+'</td>'
+						+'<td> <a href="#" onclick="removeCure('+data['data'][i].id+')" class="btn btn-danger"><i class="fa fa-close" ></i></a></td>'+
+						'</tr>');	
+					}
 					<?php endif ?>
 					}
 				}
@@ -761,14 +803,18 @@
 					$('.medicine-table tr:gt(0)').remove();
 					for(i=0;i<data['data'].length;i++)
 					{
-            <?php if($medical_type == 'd'):?>
-              $('.cure-table').append('<tr><td>'+data['data'][i].name+
-              '</td><td>'+data['data'][i].accessories+'</td><td>'+data['data'][i].created_at.split(" ")[0]+'</td><td>'+data['data'][i].username+'</td></tr>');
-            <?php else: ?>
-              $('.medicine-table').append('<tr><td>'+data['data'][i].name+
-              '</td><td>'+data['data'][i].accessories+'</td><td>'+data['data'][i].created_at+'</td><td>'+data['data'][i].username+'</td></tr>');
-            <?php endif; ?>
-          }
+						<?php if($medical_type == 'd'):?>
+							$('.cure-table').append('<tr><td>'+data['data'][i].name+
+							'</td><td>'+data['data'][i].accessories+'</td><td>'+data['data'][i].created_at.split(" ")[0]+'</td><td>'+data['data'][i].username+'</td>'
+							+'<td> <a href="#" onclick="removeMedicine('+data['data'][i].id+','+i+')" class="btn btn-danger"><i class="fa fa-close" ></i></a></td>'+
+							'</tr>');
+						<?php else: ?>
+							$('.medicine-table').append('<tr id="row_'+i+'"><td>'+data['data'][i].name+
+							'</td><td>'+data['data'][i].accessories+'</td><td>'+data['data'][i].created_at+'</td><td>'+data['data'][i].username+'</td>'+
+							'<td> <a href="#" onclick="removeMedicine('+data['data'][i].id+','+i+')" class="btn btn-danger"><i class="fa fa-close" ></i></a></td>'+
+							'</tr>');
+						<?php endif; ?>
+          			}
 				}
 			},
 			error: function (data) {
@@ -826,24 +872,29 @@
 		// }
 
 
-		// var url = "{{ url('/visits/getRadiology/') }}";
-		// $.ajax({
-			// type: "POST",
-			// url: url,
-			// data: { 'visit_id': $('#visit').val()},
-			// success: function (data) {
-				// if(data['success']=='true'){
-					// $('.radiology-table tr:gt(0)').remove();
-					// for(i=0;i<data['data'].length;i++)
-					// {
-						// $('.radiology-table').append('<tr><td>'+(i+1)+'</td><td>'+data['data'][i].dev_name+'</td><td>'+data['data'][i].proc_name+'</td><td>'+data['data'][i].u_name+'</td></tr>');
-					// }
-				// }
-			// },
-			// error: function (data) {
-				// alert("Error");
-			// }
-		// });
+		var url = "{{ url('/visits/getRadiology/') }}";
+		$.ajax({
+			type: "POST",
+			url: url,
+		    data: { 'visit_id': $('#visit').val()},
+			 success: function (data) {
+				 if(data['success']=='true'){
+					$('.radiology-table tr:gt(0)').remove();
+					for(i=0;i<data['data'].length;i++)
+					{
+						for(j=0;j<data['data'][i].length;j++)
+						{
+							$('.radiology-table').append('<tr><td>'+(j+1)+'</td><td>'+data['data'][i][j].dev_name+'</td><td>'+data['data'][i][j].proc_name+'</td><td>'+data['data'][i][j].u_name+'</td>'
+							+'<td> <a href="#" onclick="removeRad('+data['data'][i][j].id+')" class="btn btn-danger"><i class="fa fa-close" ></i></a></td>'+
+							'</tr>');
+						}
+					}
+				}
+			},
+			error: function (data) {
+				alert("Error");
+			}
+		});
 
 
 
@@ -866,6 +917,67 @@
 
 	}
 
+	function removeMedicine(id,row_id) {
+
+		if(confirm("هل تريد حذف الأدوية و المستلزمات؟")){
+			var url = "{{ url('visits/remove_medicine') }}";
+			$.ajax({
+				type: "POST",
+				url: url,
+				data: { 'id': id },
+				success: function (data) {
+					if(data['success']=='true'){
+						$('.medicine-table #row_'+row_id).remove();
+						restorePatientData(global_row_id);
+					}
+				},
+				error: function (data) {
+					alert("Error");
+				}
+			});
+		}
+		
+	}
+
+	function removeCure(id) {
+
+		if(confirm("هل تريد حذف الأدوية و المستلزمات؟")){
+			var url = "{{ url('visits/remove_medicine') }}";
+			$.ajax({
+				type: "POST",
+				url: url,
+				data: { 'id': id, 'department': true },
+				success: function (data) {
+					if(data['success']=='true'){
+						restorePatientData(global_row_id);
+					}
+				},
+				error: function (data) {
+					alert("Error");
+				}
+			});
+		}
+	}
+
+	function removeRad(id) {
+
+		if(confirm("هل تريد حذف الأشعة؟")){
+			var url = "{{ url('visits/remove_radiology') }}";
+			$.ajax({
+				type: "POST",
+				url: url,
+				data: { 'id': id },
+				success: function (data) {
+					if(data['success']=='true'){
+						restorePatientData(global_row_id);
+					}
+				},
+				error: function (data) {
+					alert("Error");
+				}
+			});
+		}
+	}
 
   </script>
 @endsection

@@ -9,13 +9,13 @@
   <div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
+			<h1>
+			تقرير بيانات مرضى الدخول خلال فترة
+      </h1>
       <ol class="breadcrumb">
         <li><a href="{{ url('admin') }}"><i class="fa fa-dashboard"></i> الصفحة الرئيسية</a></li>
         <li class="active">تقرير بيانات مرضى الدخول خلال فترة</li>
       </ol>
-	  	<h1>
-			تقرير بيانات مرضى الدخول خلال فترة
-      </h1>
     </section>
 
     <!-- Main content -->
@@ -120,7 +120,7 @@
 									@foreach($visits_user as $visits_row)
 										@foreach($visits_row as $row)
 										<tr>
-											<td>{{$row->ticket_number==0?'لا يوجد تذكرة':$row->ticket_number}}</td>
+											<td>{{$row->ticket_number=='0'?'لا يوجد تذكرة':$row->ticket_number}}</td>
 											<td>{{$row->id}}</td>
 											<td>{{$row->name}}</td>
 											<td>{{$row->gender=='M'?'ذكر':'أنثى'}}</td>

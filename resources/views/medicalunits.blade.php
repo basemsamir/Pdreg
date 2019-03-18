@@ -7,14 +7,15 @@
   <div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
+			<h1>
+        بيانات الوحدة الطبية
+      </h1>
       <ol class="breadcrumb">
         <li><a href="{{ url('/') }}"><i class="fa fa-dashboard"></i> الصفحة الرئيسية</a></li>
         <li class="active">الوحدات الطبية</li>
         <li class="active">أدارة الوحدات الطبية</li>
       </ol>
-	  <h1>
-        بيانات الوحدة الطبية
-      </h1>
+	  
     </section>
 	
     <!-- Main content -->

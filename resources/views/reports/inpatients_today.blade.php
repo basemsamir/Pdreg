@@ -15,11 +15,11 @@
 	</style>
 </head>
 <body onload="window.print()">
-<h3 align ="center"><b>{!! $table_header !!}</b></h3>
+<h3 align ="center"  style="direction: rtl;"><b>{!! $table_header !!}</b></h3>
 @if(count($data) && isset($numberOfVisits) && $numberOfVisits > 0)
   @foreach($data as $visits_row)
     @if(count($visits_row) > 0)
-    <h4 align ="center"><b>أسم مدخل البيان : {{ $visits_row[0]->user_name }}</b></h4>
+    <h4 align ="center" style="direction: rtl;"><b>أسم مدخل البيان : {{ $visits_row[0]->user_name }}</b></h4>
     <table class="table table-striped table-bordered " style="direction: rtl;" >
     <tr>
       <th>رقم التذكرة</th>
@@ -39,7 +39,7 @@
     </tr>
       @foreach($visits_row as $row)
     	<tr>
-        <td>{{$row->ticket_number==0?'لا يوجد تذكرة':$row->ticket_number}}</td>
+        <td>{{$row->ticket_number=='0'?'لا يوجد تذكرة':$row->ticket_number}}</td>
 		 @if(isset($role_name) && $role_name == "Desk")
 		  <td>{{$row->ticket_type=="G"?"استقبال عام":"استقبال اصابات"}}</td>
 	     @endif

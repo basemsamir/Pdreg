@@ -30,13 +30,13 @@ use Carbon\Carbon;
 class VisitController extends Controller
 {
     //
-	public function index(Request $request,$mid){
+	public function index(Request $request,$mid,$desk){
 		$medical_row=MedicalUnit::find($mid);
-		//dd($medical_row);
 		if($medical_row['type'] == 'c'){
 			//DB::beginTransaction();
 			//try{
 				$current = Carbon::now();
+				$today=Carbon::today();
 				$dt = Carbon::now();
 				$dt = $dt->subHours(24);
 				$visits = Visit::join('medical_unit_visit', 'visits.id', '=', 'medical_unit_visit.visit_id')
@@ -46,7 +46,24 @@ class VisitController extends Controller
 						  ->where('closed',false)
 						  ->where('cancelled',false)
 						  ->where('convert_to',null)
-						  ->whereBetween('visits.created_at',[$dt,$current])
+						  ->where(function($query) use($desk,$dt,$current,$today){
+							  if($desk == "1"){
+								$query->whereBetween('visits.created_at',[$dt,$current]);
+							  }
+							  else{
+								$query->whereDate('visits.created_at','=',$today);
+							  }
+						  })
+						  ->where(function($query) use($desk){
+							  if($desk == "1"){
+								$query->whereNotNull('ticket_type')
+									  ->orWhereNotNull('converted_by');
+							  }
+							  else{
+								$query->whereNull('ticket_type')
+									  ->whereNull('converted_by');
+							  }
+						  })
 						  ->select('patients.id','patients.name','visits.id as visit_id','medical_units.id as dep_id')
 						  ->orderBy('visits.id', 'desc')->get();
 				//updateSeenAttrForSeenVisits($visits);
@@ -74,7 +91,7 @@ class VisitController extends Controller
 		$device_procedures= Procedure::where('device_id',1)->lists('name','id');
 		return view('department_visits',array('v_active'=>'active','visits'=>$visits,'devices'=>$devices,'proc'=>$device_procedures,'dep'=>$mid,'medical_type'=>$medical_row['type'],'clinics'=>$clinics,'departments'=>$department_clinic,'medicalunit'=>$medical_row));
 	}
-	public function store(Request $request,$mid)
+	public function store(Request $request,$mid,$desk)
 	{
 
 		$input=$request->all();
@@ -92,6 +109,8 @@ class VisitController extends Controller
 					return redirect()->back()->withErrors(['sd'=>'لا يمكن أنهاء الزيارة بدون تسجيل تشخيص أو شكوى']);
 				}
 				$visit->closed=true;
+				$visit->closed_by_doctor_id=$user_id;
+				$visit->closed_date=Carbon::today();
 				$visit->save();
 				$request->session()->flash('flash_message', "تم انهاء الزيارة بالنجاح");
 			}
@@ -161,16 +180,34 @@ class VisitController extends Controller
 		elseif($input['formID'] == 2){
 			$messages = [
 				'visit.required' => 'من فضلك أختر المريض المراد طلب أشعة',
+				'proc_name.required' => 'خانة الفحص مطلوب ادخاله',
 			];
 			$this->validate($request, [
 				'visit' => 'required',
+				'proc_name' => 'required',
 			],$messages);
-			$data=array('visit_id'=>$input['visit'],'proc_id'=>$input['procedure'],'doctor_id'=>Auth::id());
-			DB::beginTransaction();
-			$medical_order_item=MedicalOrderItem::create($data);
-			$request->session()->flash('flash_message', "تم طلب الأشعة بالنجاح");
+
+			$data=array(
+				'visit_id'=>$input['visit'],
+				'proc_name'=>$input['proc_name'],
+				'proc_id'=>$input['proc_id'],
+				'old_format'=>$input['old_format'],
+				'doctor_id'=>Auth::id());
+
+			$xray_exist = MedicalOrderItem::where('proc_name','like',$input['proc_name'])
+										   ->where('visit_id',$input['visit'])
+										   ->exists();
+			if($xray_exist){
+				return response()->json(['success' => 'false','messages'=>array("هذا الفحص مسجل لهذه التذكرة")]);
+			}
+			else{
+				$medical_order_item=MedicalOrderItem::create($data);
+				return response()->json(['success' => 'true','messages'=>"تم التسجيل بالنجاح"]);
+			}
+			
+			// The next block to send rad request to web service.
 			try{
-				$this->sendingData($input['visit'],$medical_order_item);
+				//$this->sendingData($input['visit'],$medical_order_item);
 				DB::commit();
 			}
 			catch (\Exception $e){
@@ -198,7 +235,7 @@ class VisitController extends Controller
 				$fromClinic=MedicalUnit::find($mid);
 				DB::beginTransaction();
 				try{
-					$medicalunitvisit=$fromClinic->visits()->updateExistingPivot($input['visit'],array('convert_to'=>$toClinic));
+					$medicalunitvisit=$fromClinic->visits()->orderBy('created_at','desc')->updateExistingPivot($input['visit'],array('convert_to'=>$toClinic));
 					$visit->medicalunits()->attach(array($toClinic=>array('user_id'=>Auth::id())));
 					DB::commit();
 					$request->session()->flash('flash_message', "تم التحويل بالنجاح");
@@ -268,8 +305,17 @@ class VisitController extends Controller
 				$error_messages[]=$error;
 			if($validator->fails())
 				return response()->json(['success' => 'false','messages'=>$error_messages]);
-			VisitMedicine::create(['visit_id'=>$input['visit'],'name'=>$input['medicines'],'accessories'=>$input['accessories']==""?null:$input['accessories'],'typist_id'=>Auth::id()]);
-			return response()->json(['success' => 'true','messages'=>"تم التسجيل بالنجاح"]);
+			
+			$medicine_exist = VisitMedicine::where('name','like',$input['medicines'])
+										   ->where('visit_id',$input['visit'])
+										   ->exists();
+			if(!$medicine_exist){
+				VisitMedicine::create(['visit_id'=>$input['visit'],'name'=>$input['medicines'],'accessories'=>$input['accessories']==""?null:$input['accessories'],'typist_id'=>Auth::id()]);
+				return response()->json(['success' => 'true','messages'=>"تم التسجيل بالنجاح"]);	
+			}
+			else{
+				return response()->json(['success' => 'false','messages'=>array("هذا الدواء مسجل لهذه التذكرة")]);
+			}
 		}
 		elseif($input['formID'] == 6){
 			$messages = [
@@ -291,7 +337,7 @@ class VisitController extends Controller
 			$visit->save();
 			return response()->json(['success' => 'true','messages'=>"تم التسجيل بالنجاح"]);
 		}
-		return redirect()->action('VisitController@index',array('mid'=>$mid));
+		return redirect()->action('VisitController@index',array('mid'=>$mid,'desk'=>$desk));
 	}
 	public function deleteVisit($vid){
 
@@ -406,7 +452,6 @@ class VisitController extends Controller
 		$visit_data=Visit::leftJoin('users','users.id','=','visits.reference_doctor_id')
 		->where('visits.id','=',$visitid)
 		->select('visits.exit_status as es','visits.exit_date as ed','visits.final_diagnosis as fd','doctor_recommendation','users.name as name')->get();
-		//dd($visit_data);
 		return view('report_visit_exit',array('s_active'=>'active','data'=>$visit_data));
 	}
 

@@ -28,8 +28,8 @@ Route::group(['middleware' => ['auth']], function () {
 
 	Route::get('patients/show','PatientController@show')->middleware('entry_desk_receiption_role');
 	Route::post('patients/show','PatientController@search')->middleware('entry_desk_receiption_role');
-	Route::get('printpatientdata/{id}&{vid}','PatientController@printdata')->middleware('entrypoint_receiption_role');
-	Route::get('printpatientcard/{id}','PatientController@printcarddata')->middleware('entrypoint_receiption_role');
+	Route::get('printpatientdata/{id}&{vid}','PatientController@printdata')->middleware('entry_desk_receiption_role');
+	Route::get('printpatientcard/{id}','PatientController@printcarddata')->middleware('entry_desk_receiption_role');
 	Route::get('patients/ticket/{id}','PatientController@print_ticket')->middleware('receiption_role');
 	Route::get('patients/visits/{id}&{visit_id}','PatientController@addvisit')->middleware('entry_desk_receiption_role');
 	Route::post('patients/visits/{id}&{visit_id}','PatientController@storeVisit')->middleware('entry_desk_receiption_role');
@@ -38,6 +38,7 @@ Route::group(['middleware' => ['auth']], function () {
 	Route::get('patients/exit_visit_report/{visit_id}','VisitController@reportvisit')->middleware('entrypoint_role');
 	Route::post('patients/showSID','PatientController@checkexistSID');
 	Route::post('patients/showPID','PatientController@checkexistPID');
+	Route::post('patients/checkName','PatientController@checkExistName');
 	Route::get('patients/showvisits/{eid}','PatientController@showvisits')->middleware('desk_receiption_role');
 	Route::get('patients/cancelvisit/{vid}','VisitController@deleteVisit')->middleware('desk_receiption_role');
 	Route::get('patients/convertvisit/{eid}&{vid}','VisitController@convertVisit')->middleware('desk_receiption_role');
@@ -48,6 +49,7 @@ Route::group(['middleware' => ['auth']], function () {
 	Route::post('patients/getDepartmentDoctors','PatientController@ajax_get_department_doctors');
 
 });
+
 ////////////////////////////
 // Visit Module routes /////
 ////////////////////////////
@@ -64,12 +66,15 @@ Route::get('visits/getAllDiagnoses','AjaxVisitController@ajaxGetAllDiagnoses');
 Route::get('visits/getAllComplaints','AjaxVisitController@ajaxGetAllComplaints');
 Route::get('visits/getAllMedicines','AjaxVisitController@ajaxGetAllMedicines');
 
-Route::get('visits/{mid}','VisitController@index')->middleware(['auth','doctor_role']);
-Route::post('visits/{mid}','VisitController@store')->middleware(['auth','doctor_role']);
+Route::post('visits/remove_medicine','AjaxVisitController@ajaxRemoveTicketMedicine');
+Route::post('visits/remove_radiology','AjaxVisitController@ajaxRemoveTicketRadiology');
+
+Route::get('visit/{mid}/{desk}','VisitController@index')->middleware(['auth','doctor_role']);
+Route::post('visit/{mid}/{desk}','VisitController@store')->middleware(['auth','doctor_role']);
 Route::get('visits/patient/show','PatientController@show')->middleware(['auth','doctor_role']);
 Route::post('visits/patient/show','PatientController@search')->middleware(['auth','doctor_role']);
 Route::get('visits/printhistory/{id}','PatientController@printhistorydata')->middleware(['auth','doctor_role']);
-Route::get('visits/showinpatient_file/{vid}','VisitController@show_inpatient_file_data')->middleware(['auth','entrypoint_receiption_role']);
+Route::get('visits/showinpatient_file/{vid}','VisitController@show_inpatient_file_data')->middleware(['auth','entry_desk_receiption_role']);
 Route::get('visits/showinpatient_diagnoses/{vid}','VisitController@show_inpatient_diagnoses_data')->middleware(['auth','entrypoint_receiption_role']);
 
 
@@ -127,6 +132,14 @@ Route::group(['middleware' => ['auth','admin']], function () {
 	Route::get('admin/print_total_patients','AdminController@report_total_patients_period');
 	Route::get('admin/print_total_patients_today','AdminController@report_total_patients_today');
 
+	Route::get('admin/clinic_patients','AdminController@clinic_patients_report_view');
+	Route::post('admin/clinic_patients','AdminController@clinic_patients_report_results');
+	Route::get('admin/clinic_patients_report','AdminController@clinic_patients_report_results_report');
+
+	Route::get('admin/total_dr_patients_period','AdminController@total_dr_patients_report_view');
+	Route::post('admin/total_dr_patients_period','AdminController@total_dr_patients_report_results');
+	Route::get('admin/total_dr_patients_period_report','AdminController@total_dr_patients_report_results_report');
+
 	Route::get('admin/printinpatient','AdminController@report_inpatient_period');
 	Route::get('admin/inpatientsvisitsperiod','AdminController@print_inpatients_visits_period');
 	Route::post('admin/inpatientsvisitsperiod','AdminController@show_inpatients_visits_period');
@@ -176,7 +189,20 @@ Route::group(['middleware' => ['auth','admin']], function () {
 Route::get('admin/visitstoday/{eid}','AdminController@print_visits_today')->middleware('auth');
 Route::get('admin/inpatienttoday','AdminController@print_inpatient_today')->middleware('auth');
 
-
+////////////////////////////
+// Pharm Module routes /////
+////////////////////////////
+Route::group(['middleware' => ['auth']], function () {
+	Route::get('pharm/patient_drugs','PharmController@search_patient_drugs_view');
+	Route::post('pharm/patient_drugs','PharmController@search_patient_drugs_results');
+});
+////////////////////////////
+// Rad Module routes /////
+////////////////////////////
+Route::group(['middleware' => ['auth']], function () {
+	Route::get('rad/patient_rads','RadController@search_patient_rads_view');
+	Route::post('rad/patient_rads','RadController@search_patient_rads_results');
+});
 /////////////////////////
 // Logger plugin route /////
 ////////////////////////

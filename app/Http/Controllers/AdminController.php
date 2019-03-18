@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 
 use App\Http\Requests;
 use App\Http\Requests\MedicalReportsRequest;
+use App\Http\Requests\ClinicPatientsReportRequest;
+use App\Http\Requests\TotalDrPatientsReportRequest;
 use App\Visit;
 use App\MedicalUnit;
 use App\Patient;
@@ -37,7 +39,14 @@ class AdminController extends Controller
 		$user = new User;
 		$loggable_number=Activity::users(60)->groupBy('user_id')->count();
 		$active_users= Activity::users(60)->groupBy('user_id')->get();
-		$visits= Visit::with('patient','medicalunits')->where('cancelled',false)->orderBy('id','desc')->take(10)->get();
+		$visits= Visit::with(array('patient','medicalunits'=>function($query){
+							$query->orderBy('pivot_created_at');
+					  }))
+					  ->whereHas('medicalunits',function($query){
+						$query->where('type','c');
+					  })
+					  ->where('cancelled',false)
+					  ->orderBy('id','desc')->take(10)->get();
 		return view('home',compact('d_active','role_name','patients_count','inpatient_visits','outpatient_clinic_visits','outpatient_desk_visits','loggable_number','active_users','visits'));
 	}
 	/* Get number of inpatients */
@@ -487,22 +496,21 @@ class AdminController extends Controller
 		$entrypoint=Entrypoint::find($eid);
 		$current_user=User::find(Auth::id());
 		if($current_user->role->id == 5 || $current_user->role->id == 7){
+			
 			$medical_type="c";
 			$header="بيانات حجز كشف المرضي فى ".$entrypoint['name']." بتاريخ ".date('d-m-Y');$medical_type="c";
 			$visits_user[0]= $this->_getVisits($medical_type,0,$entrypoint,$current_user->role->id,$current_user->id);
 			$visits_count=count($visits_user[0]);
-
 			return view('reports.visits_today',array('r1_active'=>'active','data'=>$visits_user,'table_header'=>$header,'medical_type'=>$medical_type,'numberOfVisits'=>$visits_count,'today_date'=>true,'role_name'=>$current_user->role->name));
 		}
 
 		else{
-			$user=$entrypoint->users()->firstOrFail();
-
+			$user=$entrypoint->users()->first();
 			$header=""; $medical_type="";
-
 			if($user->role->id==4){
 				$header=" بيانات المرضي الداخلي الذي تم تحويلهم اليوم ";$medical_type="d";
-				$visits = $this->_getVisits($medical_type,0,$entrypoint,$user->role->id,null);
+				$visits[0] = $this->_getVisits($medical_type,0,$entrypoint,$user->role->id,null);
+				
 				return view('reports.visits_today',array('r1_active'=>'active','data'=>$visits,'table_header'=>$header,'medical_type'=>$medical_type));
 			}
 			elseif($user->role->id==5 || $user->role->id==7){
@@ -519,7 +527,6 @@ class AdminController extends Controller
 					$visits_user[0]= $this->_getVisits($medical_type,0,$entrypoint,$user->role->id,null);
 					$visits_count=count($visits_user[0]);
 				}
-
 				return view('reports.visits_today',array('r1_active'=>'active','data'=>$visits_user,'table_header'=>$header,'medical_type'=>$medical_type,'numberOfVisits'=>$visits_count,'today_date'=>true,'role_name'=>$user->role->name));
 			}
 		}
@@ -683,29 +690,25 @@ class AdminController extends Controller
 		}
 		$desk_users=User::where('role_id',7)->lists('name','id');
 		$input['reception_name']=isset($input['reception_name'])?$input['reception_name']:null;
-
+		
 		if(is_null($input['reception_name'])){
-			$receiptionists=User::withTrashed()->where('role_id',7)->get();
-			$request->session()->put('receiptionists',$receiptionists);
-			$visits_count=0;
-			for($i=0;$i<count($receiptionists);$i++){
-				if(array_key_exists("determined_date",$input)){
-					$visits_user[$i] = $this->_getVisits('c',1,'',7,$receiptionists[$i]->id,$input['determined_date']);
-				}
-				else {
-					$visits_user[$i] = $this->_getVisits('c',1,'',7,$receiptionists[$i]->id,$input['fromdate'],$input['todate']);
-				}
-				$visits_count+=count($visits_user[$i]);
+			if(array_key_exists("determined_date",$input)){
+				$visits_user[0] = $this->_getDeskVisits('c','',7,null,$input['determined_date']);
 			}
+			else {
+				$visits_user[0] = $this->_getDeskVisits('c','',7,null,$input['fromdate'],$input['todate']);
+			}
+			$visits_count=count($visits_user[0]);
+			
 		}
 		else{
 			$receiptionist=User::find($input['reception_name']);
 			$request->session()->put('receiptionist',$receiptionist);
 			if(array_key_exists("determined_date",$input)){
-				$visits_user[0]= $this->_getVisits('c',1,'',7,$input['reception_name'],$input['determined_date']);
+				$visits_user[0] = $this->_getDeskVisits('c','',7,$input['reception_name'],$input['determined_date']);
 			}
 			else {
-				$visits_user[0]= $this->_getVisits('c',1,'',7,$input['reception_name'],$input['fromdate'],$input['todate']);
+				$visits_user[0] = $this->_getDeskVisits('c','',7,$input['reception_name'],$input['fromdate'],$input['todate']);
 			}
 			$visits_count=count($visits_user[0]);
 		}
@@ -725,6 +728,8 @@ class AdminController extends Controller
 		else {
 			$header=" بيانات حجز كشف المرضي فى مكاتب الأستقبال فى تاريخ : ".$request->session()->get('print_determined_date');
 		}
+		
+		$request->session()->put('print',true);
 		return view('report_desk_visits',compact('r8_active','visits_user','desk_users','header'));
 
 
@@ -742,30 +747,24 @@ class AdminController extends Controller
 			$today_date=true;
 		}
 		$visits_count=0;
-		if($receiptionists=$request->session()->get('receiptionists')){
-			for($i=0;$i<count($receiptionists);$i++){
-				if($request->session()->get('print_determined_date')){
-					$visits_user[$i] = $this->_getVisits('c',1,'',7,$receiptionists[$i]->id,$request->session()->get('print_determined_date'));
-				}
-				else {
-					$visits_user[$i]= $this->_getVisits('c',1,'',7,$receiptionists[$i]->id,$request->session()->get('print_data_fromdate'),$request->session()->get('print_data_todate'));
-				}
-				$visits_count+=count($visits_user[$i]);
+		if($receiptionist=$request->session()->get('receiptionist')){
+			if($request->session()->get('print_determined_date')){
+				$visits_user[0]= $this->_getDeskVisits('c','',7,$receiptionist->id,$request->session()->get('print_determined_date'));
+			}
+			else {
+				$visits_user[0]= $this->_getDeskVisits('c','',7,$receiptionist->id,$request->session()->get('print_data_fromdate'),$request->session()->get('print_data_todate'));
 			}
 		}
 		else{
-			$receiptionist=$request->session()->get('receiptionist');
 			if($request->session()->get('print_determined_date')){
-				$visits_user[0]= $this->_getVisits('c',1,'',7,$receiptionist->id,$request->session()->get('print_determined_date'));
+				$visits_user[0] = $this->_getDeskVisits('c','',7,null,$request->session()->get('print_determined_date'));
 			}
 			else {
-				$visits_user[0]= $this->_getVisits('c',1,'',7,$receiptionist->id,$request->session()->get('print_data_fromdate'),$request->session()->get('print_data_todate'));
+				$visits_user[0]= $this->_getDeskVisits('c','',7,null,$request->session()->get('print_data_fromdate'),$request->session()->get('print_data_todate'));
 			}
-			$visits_count=count($visits_user[0]);
+			
 		}
-
-
-		return view('reports.visits_today',array('data'=>$visits_user,'table_header'=>$header,'medical_type'=>'c','numberOfVisits'=>$visits_count,'today_date'=>$today_date,'role_name'=>$role_name));
+		return view('reports.desk_reports',array('data'=>$visits_user,'table_header'=>$header,'medical_type'=>'c','today_date'=>$today_date,'role_name'=>$role_name));
 	}
 
 
@@ -856,7 +855,10 @@ class AdminController extends Controller
 	public function show_total_patient_view(){
 		$this->flash_report_sessions();
 		$r3_active='active';
-		return view('total_patients',compact('r3_active'));
+		$reservation_type='c';
+		$clinics=MedicalUnit::where('type','c')->get();
+		$deps=MedicalUnit::where('type','d')->get();
+		return view('total_patients',compact('r3_active','reservation_type','clinics','deps'));
 	}
 
 	public function show_total_patient_results(Request $request){
@@ -888,12 +890,34 @@ class AdminController extends Controller
 				'todate' => 'required|date|after:fromdate',
 			],$messages);
 		}
-
-		if(array_key_exists("determined_date",$input)){
-			$data=$this->_getNumberVisits('c',$input['determined_date']);
+		$reservation_type=$input['reservation_type'];
+		$medical_id="";
+		if($input['department'] != ""){
+			$medical_id=$input['department'];
+		}
+		else if($input['clinic'] != ""){
+			$medical_id=$input['clinic'];
+		}
+		
+		if($reservation_type == 'e'){
+			$medical_type='d';
+			$user_role_id = 4;
 		}
 		else{
-			$data=$this->_getNumberVisits('c',$input['fromdate'],$input['todate']);
+			$medical_type='c';
+			if($reservation_type == 'c')
+				$user_role_id = 5;
+			else {
+				$user_role_id = 7;
+			}
+		}
+		$request->session()->put('reservation_type',$reservation_type);
+		$request->session()->put('medical_id',$medical_id);
+		if(array_key_exists("determined_date",$input)){
+			$data=$this->_getNumberVisits($user_role_id,$medical_type,$medical_id,$reservation_type,$input['determined_date']);
+		}
+		else{
+			$data=$this->_getNumberVisits($user_role_id,$medical_type,$medical_id,$reservation_type,$input['fromdate'],$input['todate']);
 		}
 		if(array_key_exists("determined_date",$input)){
 			$request->session()->put('print_determined_date',$input['determined_date']);
@@ -905,70 +929,212 @@ class AdminController extends Controller
 
 		$r3_active='active';
 		if(array_key_exists("determined_date",$input)){
-			$header="  تقرير إجمالي عدد الحالات في تاريخ ".$request->session()->get('print_determined_date');
+			if($reservation_type=='c')
+				$header=" تقرير عدد حالات العيادات في تاريخ ";
+			elseif($reservation_type=='d')
+				$header=" تقرير عدد حالات الأستقبال في تاريخ ";
+			else
+				$header=" تقرير عدد حالات الداخلي في تاريخ ";
+			$header.=$request->session()->get('print_determined_date');
 
 		}
 		else {
-			$header="  تقرير إجمالي عدد الحالات خلال الفترة من ".$request->session()->get('print_data_fromdate')." ألى "
-					   .$request->session()->get('print_data_todate');
+			if($reservation_type=='c')
+				$header=" تقرير عدد حالات العيادات خلال الفترة من ";
+			elseif($reservation_type=='d')
+				$header=" تقرير عدد حالات الأستقبال خلال الفترة من  ";
+			else
+				$header=" تقرير عدد حالات الداخلي خلال الفترة من ";
+			$header.=$request->session()->get('print_data_fromdate')." ألى ".$request->session()->get('print_data_todate');
 
 		}
-		return view('total_patients',compact('r3_active','data','header'));
+		$clinics=MedicalUnit::where('type','c')->get();
+		$deps=MedicalUnit::where('type','d')->get();
+		return view('total_patients',compact('r3_active','data','header','reservation_type','clinics','deps'));
+	}
+	public function clinic_patients_report_view(){
+		$this->flash_report_sessions();
+		$r12_active='active';
+		$title = 'تقرير حالات عيادة خلال فترة';
+		$clinics = MedicalUnit::getAllMedicalUnits('c')->lists('name','id');
+		return view('clinic_patients',compact('r12_active','title','clinics'));
+	}
 
+	public function clinic_patients_report_results(ClinicPatientsReportRequest $request){
+		
+		$this->flash_report_sessions();
+		$input=$request->all();
+		$r12_active='active';
+		$clinics = MedicalUnit::getAllMedicalUnits('c')->lists('name','id');
+
+		$clinic_name = $input['clinic_name'] = MedicalUnit::find($input['clinic'])->name;
+		$title = 'تقرير حالات عيادة خلال فترة';
+		$header = sprintf(' تقرير حالات عيادة %s ', $clinic_name);
+		if($input['submit'] == "reload"){
+			return redirect()->action('AdminController@clinic_patients_report_view');
+		}
+		$header.= $this->_getMedicalReportHeader($input);
+		$dates = $request->only(['date_selection', 'duration_from','duration_to']);
+		$data=$this->_getClinicPatientVisits($dates, $input['clinic']);
+
+		$this->_setClinicPatientsReportSession($input);
+		
+		return view('clinic_patients',compact('r12_active','data','header','title','clinics'));
 
 	}
 
-	public function report_total_patients_period(Request $request){
+	public function clinic_patients_report_results_report(){
 
-		if($request->session()->get('print_data_fromdate'))
-			$header="  تقرير إجمالي عدد الحالات خلال الفترة <br> من ".$request->session()->get('print_data_fromdate')." ألى "
-					 .$request->session()->get('print_data_todate');
-		else {
-			$header="  تقرير إجمالي عدد الحالات <br> فى تاريخ ".$request->session()->get('print_determined_date');
+		$input=$this->_getClinicPatientsReportSession();
+		$table_header = sprintf(' تقرير حالات عيادة %s ', $input['clinic_name']);
+		$table_header.= $this->_getMedicalReportHeader($input);
+		$dates = $this->_arrayExclude($input,['clinic_name', 'clinic']);
+		$data=$this->_getClinicPatientVisits($dates, $input['clinic']);
+		return view('reports.clinic_patients',compact('data','table_header'));
 
+	}
+
+	public function total_dr_patients_report_view(){
+		$this->flash_report_sessions();
+		$r13_active='active';
+		$title = 'تقرير حالات طبيب عيادة خلال فترة';
+		$clinic = MedicalUnit::getAllMedicalUnits('c');
+		$clinics = $clinic->lists('name','id');
+		$doctors = true;
+		return view('total_dr_patients',compact('r13_active','title','clinics','doctors'));
+	}
+	
+	public function total_dr_patients_report_results(TotalDrPatientsReportRequest $request){
+		
+		$this->flash_report_sessions();
+		$input=$request->all();
+		if($input['submit'] == "reload"){
+			return redirect()->action('AdminController@total_dr_patients_report_view');
 		}
-		if($request->session()->get('print_determined_date')){
-			$visits=$this->_getNumberVisits('c',$request->session()->get('print_determined_date'));
+		$r13_active='active';
+		$clinic = MedicalUnit::getAllMedicalUnits('c');
+		$clinics = $clinic->lists('name','id');
+		$doctors = true;
+
+		$clinic_name = $input['clinic_name'] = MedicalUnit::find($input['clinic'])->name;
+		$doctor_name = $input['doctor_name'] = User::find($input['doctor'])->name;
+		$title = 'تقرير حالات طبيب عيادة خلال فترة';
+		$header = sprintf(' تقرير حالات الطبيب: %s <br> في عيادة: %s <br>',$doctor_name,$clinic_name);
+		$header.= $this->_getMedicalReportHeader($input);
+		$dates = $request->only(['date_selection', 'duration_from','duration_to']);
+		$data=$this->_getClinicDrPatientVisits($dates, $input['doctor']);
+		$this->_setClinicDrPatientsReportSession($input);
+		
+		return view('total_dr_patients',compact('r13_active','data','header','title','clinics','doctors'));
+
+	}
+
+	public function total_dr_patients_report_results_report(){
+
+		$input=$this->_getClinicDrPatientsReportSession();
+		$title = 'تقرير حالات طبيب عيادة خلال فترة';
+		$table_header = sprintf(' تقرير حالات الطبيب: %s <br> في عيادة: %s <br>',$input['doctor_name'] ,$input['clinic_name']);
+		$table_header.= $this->_getMedicalReportHeader($input);
+		$dates = $this->_arrayExclude($input,['clinic_name', 'clinic','doctor_name','doctor']);
+		$data=$this->_getClinicDrPatientVisits($dates, $input['doctor']);
+		return view('reports.total_dr_patients',compact('data','table_header','title'));
+
+	}
+
+	private function _arrayExclude($array,$excludeKeys){
+		foreach($excludeKeys as $key){
+			unset($array[$key]);
+		}
+		return $array;
+	}
+
+	public function report_total_patients_period(Request $request){
+		$reservation_type=$request->session()->get('reservation_type');
+		$medical_id=$request->session()->get('medical_id');
+		if($request->session()->get('print_data_fromdate')){
+			if($reservation_type=='c')
+				$header=" تقرير عدد حالات العيادات خلال الفترة  <br> من ";
+			elseif($reservation_type=='d')
+				$header=" تقرير عدد حالات الأستقبال خلال الفترة <br> من ";
+			else
+				$header=" تقرير عدد حالات الداخلي خلال الفترة <br> من ";
+			$header.=$request->session()->get('print_data_fromdate')." ألى ".$request->session()->get('print_data_todate');
+		}
+		else {
+			if($reservation_type=='c')
+				$header=" تقرير عدد حالات العيادات <br> فى تاريخ  ";
+			elseif($reservation_type=='d')
+				$header=" تقرير عدد حالات الأستقبال <br> فى تاريخ  ";
+			else
+				$header=" تقرير عدد حالات الداخلي <br> فى تاريخ  ";
+			$header.=$request->session()->get('print_determined_date');
+		}
+		if($reservation_type == 'e'){
+			$medical_type='d';
+			$user_role_id = 4;
 		}
 		else{
-			$visits=$this->_getNumberVisits('c',$request->session()->get('print_data_fromdate'),$input['print_data_todate']);
+			$medical_type='c';
+			if($reservation_type == 'c')
+				$user_role_id = 5;
+			else {
+				$user_role_id = 7;
+			}
+		}
+		if($request->session()->get('print_determined_date')){
+			$visits=$this->_getNumberVisits($user_role_id,$medical_type,$medical_id,$reservation_type,$request->session()->get('print_determined_date'));
+		}
+		else{
+			$visits=$this->_getNumberVisits($user_role_id,$medical_type,$medical_id,$reservation_type,$request->session()->get('print_data_fromdate'),$request->session()->get('print_data_todate'));
 		}
 
-		return view('reports.total_patients_period',array('data'=>$visits,'table_header'=>$header,'medical_type'=>'c'));
+		return view('reports.total_patients_period',array('data'=>$visits,'table_header'=>$header,'medical_type'=>$reservation_type));
 	}
 
 	public function report_total_patients_today(){
 
-		$header=" تقرير إجمالي عدد الحالات بتاريخ ".date('d-m-Y');$medical_type="c";
+		$header=" تقرير عدد حالات العيادات بتاريخ ".date('d-m-Y');
+		$medical_type="c";
+		$reservation_type="c";
 		$current_date=date("Y-m-d",time());
-		$visits = $this->_getNumberVisits($medical_type,$current_date);
-		return view('reports.total_patients_period',array('data'=>$visits,'table_header'=>$header,'medical_type'=>$medical_type));
+		$visits = $this->_getNumberVisits(5,$medical_type,'',$reservation_type,$current_date);
+		return view('reports.total_patients_period',array('data'=>$visits,'table_header'=>$header,'medical_type'=>$reservation_type));
+
+	}
+	public function report_total_desk_patients_today(){
+
+		$header=" تقرير عدد حالات الأستقبال بتاريخ ".date('d-m-Y');
+		$medical_type="c";
+		$reservation_type="d";
+		$current_date=date("Y-m-d",time());
+		$visits = $this->_getNumberVisits(7,$medical_type,'',$reservation_type,$current_date);
+		return view('reports.total_patients_period',array('data'=>$visits,'table_header'=>$header,'medical_type'=>$reservation_type));
 
 	}
 
 	public function print_inpatient_today(){
 
-			$current_user=User::find(Auth::id());
-			if($current_user->role->name == "Doctor" || $current_user->role->name == "Nursing")
-				return redirect()->guest('auth/login');
-			$table_header=" بيانات مرضي الدخول بتاريخ ".date("d-m-Y");
-			$r4_active="active";
-			$determined_date=true;
-			$role_name=$current_user->role->name;
-			if($current_user->role->id == 4 || $current_user->role->id == 5 || $current_user->role->id == 7){
-				$data[0]= $this->__getInpatientVisits($current_user);
-				$numberOfVisits=count($data[0]);
-				return view('reports.inpatients_today',compact('r4_active','data','table_header','numberOfVisits','role_name'));
+		$current_user=User::find(Auth::id());
+		if($current_user->role->name == "Doctor" || $current_user->role->name == "Nursing")
+			return redirect()->guest('auth/login');
+		$table_header=" بيانات مرضي الدخول بتاريخ ".date("d-m-Y");
+		$r4_active="active";
+		$determined_date=true;
+		$role_name=$current_user->role->name;
+		if($current_user->role->id == 4 || $current_user->role->id == 5 || $current_user->role->id == 7){
+			$data[0]= $this->__getInpatientVisits($current_user);
+			$numberOfVisits=count($data[0]);
+			return view('reports.inpatients_today',compact('r4_active','data','table_header','numberOfVisits','role_name'));
+		}
+		else{
+			$numberOfVisits=0;
+			$reception_users=User::whereIn('role_id',[4,5,7])->get();
+			for($i=0;$i<count($reception_users);$i++){
+				$data[$i] = $this->__getInpatientVisits($reception_users[$i]);
+				$numberOfVisits+=count($data[$i]);
 			}
-			else{
-				$numberOfVisits=0;
-				$reception_users=User::whereIn('role_id',[4,5,7])->get();
-				for($i=0;$i<count($reception_users);$i++){
-					$data[$i] = $this->__getInpatientVisits($reception_users[$i]);
-					$numberOfVisits+=count($data[$i]);
-				}
-				return view('reports.inpatients_today',compact('r4_active','data','table_header','numberOfVisits','determined_date'));
-			}
+			return view('reports.inpatients_today',compact('r4_active','data','table_header','numberOfVisits','determined_date'));
+		}
 	}
 
 	public function print_inpatients_visits_period(){
@@ -1392,30 +1558,26 @@ class AdminController extends Controller
 		return redirect()->action('AdminController@index');
 	}
 
-	private function _getMedicalReportHeader($input){
+		private function _getMedicalReportHeader($input){
 		$header="";
 		switch($input['date_selection']){
 			case 'today':
-			case 'yestarday':
 				$header.=" فى تاريخ ";
-				break;
-			case 'last_week':
-			case 'date_selected':
-				$header.=" خلال الفترة من ";
-				break;
-		}
-		switch($input['date_selection']){
-			case 'today':
 				$header.=Carbon::today()->format('Y-m-d');
 				break;
 			case 'yestarday':
-				$header.=Carbon::yestarday()->format('Y-m-d');
+				$header.=" فى تاريخ ";
+				$header.=Carbon::yesterday()->format('Y-m-d');
 				break;
 			case 'last_week':
-				$header.=Carbon::now()->subWeek()->format('Y-m-d')." الي ".Carbon::now()->format('Y-m-d');
+				$header.=" خلال الفترة من ";
+				$header.=Carbon::now()->subWeek()->format('Y-m-d')." الي ".Carbon::yesterday()->format('Y-m-d');
 				break;
 			case 'date_selected':
+				$header.=" خلال الفترة من ";
 				$header.=$input['duration_from']." الي ".$input['duration_to'];
+				break;
+			default:
 				break;
 		}
 		return $header;
@@ -1439,6 +1601,46 @@ class AdminController extends Controller
 			'ticket_number'=>Session::get('print_ticket_number'),
 			'name'=>Session::get('print_name'),
 			'id'=>Session::get('print_id'),
+		);
+	}
+  private function _setClinicPatientsReportSession($input){
+		if(array_key_exists('duration_from',$input)){
+			Session::put('print_from_date',$input['duration_from']);
+			Session::put('print_to_date',$input['duration_to']);
+		}
+		Session::put('print_date_selection',$input['date_selection']);
+		Session::put('print_clinic_name',$input['clinic_name']);
+		Session::put('print_clinic_id',$input['clinic']);
+	}
+	private function _getClinicPatientsReportSession(){
+		return array(
+			'date_selection'=>Session::get('print_date_selection'),
+			'duration_from'=>Session::get('print_from_date'),
+			'duration_to'=>Session::get('print_to_date'),
+			'clinic_name'=>Session::get('print_clinic_name'),
+			'clinic'=>Session::get('print_clinic_id'),
+		);
+	}
+	private function _setClinicDrPatientsReportSession($input){
+		if(array_key_exists('duration_from',$input)){
+			Session::put('print_from_date',$input['duration_from']);
+			Session::put('print_to_date',$input['duration_to']);
+		}
+		Session::put('print_date_selection',$input['date_selection']);
+		Session::put('print_clinic_name',$input['clinic_name']);
+		Session::put('print_clinic_id',$input['clinic']);
+		Session::put('print_doctor_name',$input['doctor_name']);
+		Session::put('print_doctor_id',$input['doctor']);
+	}
+	private function _getClinicDrPatientsReportSession(){
+		return array(
+			'date_selection'=>Session::get('print_date_selection'),
+			'duration_from'=>Session::get('print_from_date'),
+			'duration_to'=>Session::get('print_to_date'),
+			'clinic_name'=>Session::get('print_clinic_name'),
+			'clinic'=>Session::get('print_clinic_id'),
+			'doctor_name'=>Session::get('print_doctor_name'),
+			'doctor'=>Session::get('print_doctor_id'),
 		);
 	}
 	/* get patient visits with limited attrs */
@@ -1506,6 +1708,76 @@ class AdminController extends Controller
 							   'birthdate','medical_units.name as category_name','visits.id','entry_date','entry_time')
 					  ->orderBy('visits.id','desc')
 					  ->get();
+	}
+	/* get patient visits with limited attrs */
+	private function _getClinicPatientVisits($dates, $clinic_id){
+		
+		return  Visit::join('patients','patient_id','=','patients.id')
+					 ->join('medical_unit_visit','medical_unit_visit.visit_id','=','visits.id')
+					 ->join('medical_units','medical_units.id','=','medical_unit_visit.medical_unit_id')
+					 ->where(function($query) use($clinic_id){
+							$query->where('medical_units.id',$clinic_id)
+								->orWhere('medical_units.id',DB::raw("(select parent_department_id from medical_units where id=$clinic_id)"));
+					 })
+					
+					 ->where('cancelled',0)
+					 ->where(function($query) use($dates){
+						switch ($dates['date_selection']) {
+							case 'today':
+								$query->whereDate('visits.created_at','=',Carbon::now()->format('Y-m-d'));
+								break;
+							case 'yestarday':
+								$query->whereDate('visits.created_at','=',Carbon::yesterday()->format('Y-m-d'));
+								break;
+							case 'last_week':
+								$query->whereBetween('visits.created_at',[Carbon::now()->subWeek()->format('Y-m-d'),Carbon::now()->format('Y-m-d')]);
+								break;
+							case 'date_selected':
+								if($dates['duration_from']!="" && $dates['duration_to'] !="")
+									$query->whereDate('visits.created_at','>=',$dates['duration_from']);
+									$query->whereDate('visits.created_at','<=',$dates['duration_to']);
+								break;
+						}
+					 })
+					 ->where(function($query){
+						 $query->whereNull('ticket_type')
+						 	   ->where('ticket_number','!=','')
+						 	   ->whereNull('converted_by');
+					 })
+					 ->select('visits.ticket_number','patients.id','patients.name','patients.birthdate','patients.address','visits.created_at')
+					 ->orderBy('visits.id','desc')
+					 ->get();
+	}
+	/* get total patient for doctor */
+	private function _getClinicDrPatientVisits($dates,$doctor_id){
+		
+		return  Visit::join('patients','patient_id','=','patients.id')
+					 ->where('visits.closed_by_doctor_id',$doctor_id)
+					 ->where(function($query) use($dates){
+						switch ($dates['date_selection']) {
+							case 'today':
+								$query->whereDate('visits.closed_date','=',Carbon::today());
+								break;
+							case 'yestarday':
+								$query->whereDate('visits.closed_date','=',Carbon::yesterday());
+								break;
+							case 'last_week':
+								$query->whereBetween('visits.closed_date',[Carbon::now()->subWeek()->format('Y-m-d'),Carbon::now()->format('Y-m-d')]);
+								break;
+							case 'date_selected':
+								if($dates['duration_from']!="" && $dates['duration_to'] !="")
+									$query->whereDate('visits.closed_date','>=',$dates['duration_from']);
+									$query->whereDate('visits.closed_date','<=',$dates['duration_to']);
+								break;
+						}
+					 })
+					 ->where(function($query){
+						 $query->whereNull('ticket_type')
+						 	   ->whereNull('converted_by');
+					 })
+					 ->select('visits.ticket_number','patients.name','patients.birthdate','patients.address','visits.closed_date')
+					 ->orderBy('visits.id','desc')
+					 ->get();
 	}
 	/* get patient visit completely for printing */
 	private function _getPatientVisitReport($input,$category,$visit_id=''){
@@ -1731,12 +2003,19 @@ class AdminController extends Controller
 	}
 	public function searchTicketNumber()
 	{
-			$visits= Visit::with('patient')->where('visits.ticket_number',request()->ticket_number)->get();
+		if(request()->ticket_number != ""){
+			$visits= Visit::with('patient','medicalunits')
+							->where('cancelled',false)
+							->where('visits.ticket_number',request()->ticket_number)
+							->get();
 			return redirect()->back()->withVisits($visits);
+		}
+		return redirect()->back();
 	}
 	private function flash_report_sessions(){
 
-		if(Session::has('receiptionist') || Session::has('receiptionists') || Session::forget('print_data_fromdate') || Session::forget('print_determined_date')){
+		if(Session::has('receiptionist') || Session::has('receiptionists') || Session::forget('print_data_fromdate') || Session::forget('print_determined_date')
+		|| Session::has('print_date_selection')){
 			Session::forget('receiptionist');
 			Session::forget('receiptionists');
 			Session::forget('print_data_fromdate');
@@ -1749,6 +2028,11 @@ class AdminController extends Controller
 			Session::forget('print_ticket_number');
 			Session::forget('print_name');
 			Session::forget('print_id');
+			Session::forget('print');
+			Session::forget('reservation_type');
+			Session::forget('medical_id');
+      		Session::forget('print_clinic_id');
+			Session::forget('print_clinic_name');
 		}
 	}
 	public function report_total_inpatients_period_view()
@@ -1841,35 +2125,35 @@ class AdminController extends Controller
 	}
 	private function __getInpatientVisitsHasr($user,$fromdate='',$todate='')
 	{
-				return Visit::join('patients', 'patients.id', '=', 'visits.patient_id')
-					->where(function($query) use ($user,$fromdate,$todate){
-						// Reception or Entrypoint
-						if($user->role->id == 5 || $user->role->id == 4 || $user->role->id == 7)
-						{
-							$query->where('visits.user_id',$user->id);
-						}
-						if($fromdate != ""){
-							if($todate != ""){
-								$query->whereDate('visits.entry_date','>=',$fromdate);
-								$query->whereDate('visits.entry_date','<=',$todate);
-							}
-							else{
-
-								$query->whereDate('visits.entry_date','=',$fromdate);
-							}
+			return Visit::join('patients', 'patients.id', '=', 'visits.patient_id')
+				->where(function($query) use ($user,$fromdate,$todate){
+					// Reception or Entrypoint
+					if($user->role->id == 5 || $user->role->id == 4 || $user->role->id == 7)
+					{
+						$query->where('visits.user_id',$user->id);
+					}
+					if($fromdate != ""){
+						if($todate != ""){
+							$query->whereDate('visits.entry_date','>=',$fromdate);
+							$query->whereDate('visits.entry_date','<=',$todate);
 						}
 						else{
-								$query->whereDate('visits.entry_date','=',date('Y-m-d'));
+
+							$query->whereDate('visits.entry_date','=',$fromdate);
 						}
-					})
-					//->where('type','d')
-					->where('cancelled',false)
-					->where('visits.closed','1')
-					->select(DB::raw(" (select name from users where users.id=visits.user_id) as user_name "),
-					'patients.name as name','visits.final_diagnosis as fd','visits.entry_date as ed',
-					'visits.exit_date as exd'
-					)
-					->orderBy('visits.created_at', 'desc')->get();
+					}
+					else{
+							$query->whereDate('visits.entry_date','=',date('Y-m-d'));
+					}
+				})
+				//->where('type','d')
+				->where('cancelled',false)
+				->where('visits.closed','1')
+				->select(DB::raw(" (select name from users where users.id=visits.user_id) as user_name "),
+				'patients.name as name','visits.final_diagnosis as fd','visits.entry_date as ed',
+				'visits.exit_date as exd'
+				)
+				->orderBy('visits.created_at', 'desc')->get();
 	}
 	public function print_inpatients_dep_period(Request $request)
 	{
@@ -1912,6 +2196,53 @@ class AdminController extends Controller
 
 	public function _getVisits($medical_type,$type,$entrypoint='',$user_role_id,$receiptionist_id,$from_date='',$to_date=''){
 
+		return Visit::with(array('user','patient','medicalunits'=>function($query){
+						$query->orderBy('pivot_created_at','asc');
+					}))
+					->where(function($query) use ($user_role_id,$type,$entrypoint,$from_date,$to_date,$receiptionist_id){
+						if($type == '0'){
+							$query->whereDate('created_at','=',date('Y-m-d'));
+						}
+						else{
+							if($to_date == '')
+								$query->whereDate('created_at','=',$from_date);
+							else{
+								$query->whereDate('created_at','>=',$from_date);
+								$query->whereDate('created_at','<=',$to_date);
+							}
+						}
+						// Reception is role number 5
+						if($user_role_id == 5){
+							if($entrypoint != ""){
+								$query->where('entry_id','=',$entrypoint->id);
+							}
+						}
+						
+						if($receiptionist_id != null && $user_role_id == 5){
+							$query->where('user_id',$receiptionist_id);
+						}
+					})
+          			->where(function($query) use($entrypoint,$user_role_id,$receiptionist_id){
+						    if($user_role_id == 7)
+							{
+								if($entrypoint != "")
+									$query->where('entry_id','=',$entrypoint->id)
+										  ->orWhere('convert_to_entry_id','=',$entrypoint->id);
+							}
+							if($receiptionist_id != null && $user_role_id == 7){
+								$query->where('visits.user_id',$receiptionist_id);
+							}
+					})
+					->whereHas('medicalunits',function($query) use($medical_type,$user_role_id){
+						if($user_role_id == 4)
+							$query->where('type',$medical_type);
+					})
+					->where('cancelled',false)
+					->orderBy('registration_datetime','asc') 
+					->orderBy('created_at','asc')
+					->get();
+		
+		/*
 		return  Visit::join('medical_unit_visit', 'visits.id', '=', 'medical_unit_visit.visit_id')
 					  ->join('medical_units','medical_unit_visit.medical_unit_id','=','medical_units.id')
 					  ->join('patients','patients.id','=','visits.patient_id')
@@ -1961,9 +2292,52 @@ class AdminController extends Controller
 					  ->orderBy('visits.registration_datetime','asc') 
 					  ->orderBy('visits.created_at','asc')
 					  ->get();
+		*/
 	}
-	public function _getNumberVisits($medical_type,$from_date,$to_date=''){
 
+	public function _getDeskVisits($medical_type,$entrypoint,$user_role_id,$user_id,$from_date,$to_date='')
+	{
+
+		return Visit::with(array('medicalunits'=>function($query){
+						$query->orderBy('pivot_created_at');
+					},'patient','user'))
+					->where(function($query) use ($from_date,$to_date,$user_role_id,$entrypoint){
+						if($to_date == '')
+							$query->whereDate('created_at','=',$from_date);
+						else{
+							$query->whereDate('created_at','>=',$from_date);
+							$query->whereDate('created_at','<=',$to_date);
+						}
+					})
+					->where(function($query) use($user_role_id,$entrypoint){
+						if($user_role_id == 7)
+						{
+							if($entrypoint != "")
+								$query->where('entry_id',$entrypoint->id)
+									  ->orWhere('convert_to_entry_id',$entrypoint->id);
+							else {
+								$query->whereNotNull('ticket_type')->whereNotNull('entry_id')
+									  ->orWhereNotNull('convert_to_entry_id');
+							}
+						}
+						
+					})
+					->whereHas('medicalunits',function ($query) use($medical_type,$user_role_id){
+						if($user_role_id == 4)
+							$query->where('type',$medical_type);
+					})
+					->where(function($query) use($user_id){
+						if($user_id != null){
+							$query->where('user_id',$user_id);
+						}
+					})
+					->where('cancelled',false)
+					->orderBy('registration_datetime','asc') 
+					->orderBy('created_at','asc')
+					->get();
+	}
+	public function _getNumberVisits($user_role_id,$medical_type,$medical_id='',$reservation_type,$from_date,$to_date=''){
+		
 		return Visit::join('medical_unit_visit', 'visits.id', '=', 'medical_unit_visit.visit_id')
 					->join('medical_units','medical_unit_visit.medical_unit_id','=','medical_units.id')
 					->where(function($query) use ($from_date,$to_date){
@@ -1975,13 +2349,30 @@ class AdminController extends Controller
 							$query->whereDate('visits.created_at','=',$from_date);
 						}
 					})
-					->where('type','=',$medical_type)
+					->where(function($query) use ($reservation_type){
+						if($reservation_type == 'c'){
+							$query->whereNull('ticket_type')
+								  ->where('ticket_number','!=','');
+						}
+						else if($reservation_type == 'd'){
+							$query->whereNotNull('ticket_type');
+						}
+					})
+					->where(function($query) use($user_role_id,$medical_type){
+						if($user_role_id == 4)
+							$query->where('type','=',$medical_type);
+					})
+					->where(function($query) use($medical_id){
+						if($medical_id != "")
+							$query->where('medical_units.id',$medical_id)
+								  ->orWhere('medical_units.id',DB::raw("(select parent_department_id from medical_units where id=$medical_id)"));
+					})
 					->where('cancelled',false)
 					->where(function ($query) {
 							$query->whereNull('medical_unit_visit.convert_to')
-										->orWhere('department_conversion',1);
+								  ->orWhere('medical_unit_visit.department_conversion',0);
 					})
-					->groupBy('medical_unit_id')
+					->groupBy('medical_units.name')
 					->select(DB::raw(' count(*) as numberOfVisits'),'medical_units.name')
 					->get();
 	}

@@ -7,14 +7,15 @@
   <div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
+		<h1>
+        أضافة مستخدم الي مكتب
+      </h1>
       <ol class="breadcrumb">
         <li><a href="{{ url('/') }}"><i class="fa fa-dashboard"></i> الصفحة الرئيسية</a></li>
         <li class="active">إدارة مكاتب مستخدمي النظام</li>
         <li class="active">أضافة مستخدم الي مكتب</li>
       </ol>
-	  <h1>
-        أضافة مستخدم الي مكتب
-      </h1>
+	  
     </section>
 	
     <!-- Main content -->

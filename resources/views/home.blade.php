@@ -129,8 +129,9 @@
             <div class="form-inline">
               {!! Form::open(array('class'=>'form')) !!}
                 {!! Form::label('رقم التذكرة',null) !!}
-                {!! Form::text('ticket_number',null,['class'=>'form-control']) !!}
+                {!! Form::text('ticket_number',null,['class'=>'form-control','id'=>'ticket_number']) !!}
                 <button type="submit" class="btn btn-primary" >بحث</button>
+                <button class="btn btn-success" onclick="location.reload();">عرض اخر النتائج</button>
               {!! Form::close() !!}
             </div>
             <br>
@@ -167,11 +168,7 @@
 								  <td>{{$row->patient->name}}</td>
                   <td>
                     @if(!$row->all_deps)
-                      @foreach($row->medicalunits as $medicalunit)
-                        @if($medicalunit->pivot->convert_to == null)
-                          {{$medicalunit->name}}
-                        @endif
-                      @endforeach
+                      {{$row->medicalunits[0]->name}} 
                     @else
                       {{'إستكشاف طارىء'}}
                     @endif
@@ -198,7 +195,7 @@
                           {{ "تم التحويل المريض" }}
                       @else
                         <a href=' {{ url("admin/$id&$vid&$clinic_id/converttoentry") }} '
-                          class="btn btn-warning" ><i class="fa fa-undo"></i></a>
+                          class="btn btn-warning"  onclick="return confirm(' هل تريد تحويل المريض الي القسم الداخلي ؟') "><i class="fa fa-undo"></i></a>
                       @endif
                     @endif
                   </td>

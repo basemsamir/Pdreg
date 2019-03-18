@@ -15,6 +15,18 @@
   <div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
+			<h1>
+			@if($role_name == 'Entrypoint')
+				زيارات مكتب الدخول
+			@elseif(isset($ticket_and_entry))
+				بيانات مرضي الدخول
+			@elseif($role_name == 'Desk')
+				زيارات مكتب الاستقبال
+			@else
+				زيارات مكتب حجز التذاكر
+			@endif
+
+      </h1>
       <ol class="breadcrumb">
         <li><a href="{{ url('/') }}"><i class="fa fa-dashboard"></i> الصفحة الرئيسية</a></li>
         <li class="active">
@@ -28,20 +40,9 @@
 					زيارات مكتب حجز التذاكر
 				@endif
 
-		</li>
+				</li>
       </ol>
-	  <h1>
-			@if($role_name == 'Entrypoint')
-				زيارات مكتب الدخول
-			@elseif(isset($ticket_and_entry))
-				بيانات مرضي الدخول
-			@elseif($role_name == 'Desk')
-				زيارات مكتب الاستقبال
-			@else
-				زيارات مكتب حجز التذاكر
-			@endif
-
-      </h1>
+	  
     </section>
 
     <!-- Main content -->
@@ -123,9 +124,11 @@
 									@if($role_name  == 'Desk' )
 										 <td>{{$row->ticket_type!=null?($row->ticket_type=="G"?'استقبال عام':'استقبال اصابات'):""}}</td>
 									@endif
-								  <td>{{$row->id}}</td>
-								  <td>{{$row->name}}</td>
-								  <td>{{$row->dept_name}}</td>
+								  <td>{{$row->patient->id}}</td>
+								  <td>{{$row->patient->name}}</td>
+								  <td>
+										{{ $row->medicalunits[0]->name }}
+									</td>
 									@if($role_name  == 'Entrypoint' ||  isset($ticket_and_entry))
 										<td>
 												@if (strrpos($row->entry_time,"AM") !== false)
@@ -142,11 +145,11 @@
 									@endif
 									@if($role_name  == 'Entrypoint' ||  isset($ticket_and_entry) )
 
-									 <td>{{$row->ed}}</td>
+									 <td>{{$row->exit_date}}</td>
 									 @if($role_name  != 'Receiption')
 									 <td>{{$row->room_number}}</td>
 									 <td>{{$row->file_number}}</td>
-									 <td>{{$row->cure_type_name}}</td>
+									 <td>{{ isset($row->cure_type)?$row->cure_type->name:''}}</td>
 									 <td>{{$row->contract}}</td>
 										@if($role_name  != 'Receiption')
 										 <td style="text-align:center">
@@ -155,15 +158,15 @@
 											<span class="caret"></span> <i class="fa fa-print"></i> </a>
 											 <ul class="dropdown-menu">
 												@if(is_null($sub_type_entrypoint) || ($sub_type_entrypoint == "entry_only" || $sub_type_entrypoint == "entry_and_exit"))
-													<li><a href='{{ url("visits/showinpatient_file/{$row->visit_id}") }}'  target="_blank" >بيانات الملف</a></li>
-													<li><a href='{{ url("printpatientdata/$row->id&$row->visit_id") }}'  target="_blank" >اذن الدخول</a></li>
+													<li><a href='{{ url("visits/showinpatient_file/{$row->id}") }}'  target="_blank" >بيانات الملف</a></li>
+													<li><a href='{{ url("printpatientdata/{$row->patient->id}&{$row->id}") }}'  target="_blank" >اذن الدخول</a></li>
 												@endif
 												@if(!is_null($sub_type_entrypoint) && $sub_type_entrypoint == "entry_and_exit")
-													<li><a href='{{ url("visits/showinpatient_diagnoses/{$row->visit_id}") }}'  target="_blank" >ملف التشخيص</a></li>
+													<li><a href='{{ url("visits/showinpatient_diagnoses/{$row->id}") }}'  target="_blank" >ملف التشخيص</a></li>
 												@endif
 												@if(!is_null($sub_type_entrypoint) && ($sub_type_entrypoint == "exit_only" || $sub_type_entrypoint == "entry_and_exit"))
 													@if($row->closed == true)
-													<li><a href='{{ url("patients/exit_visit_report/{$row->visit_id}") }}' target="_blank">الخروج</a></li>
+													<li><a href='{{ url("patients/exit_visit_report/{$row->id}") }}' target="_blank">الخروج</a></li>
 													@endif
 												@endif
 											  </ul>
@@ -173,8 +176,8 @@
 											@if(is_null($sub_type_entrypoint) || ($sub_type_entrypoint == "entry_only" || $sub_type_entrypoint == "entry_and_exit"))
 
 											 <td style="text-align:center">
-												<a href='{{ url("/patients/visits/$row->id&$row->visit_id") }}'
-												@if($row->closed == true && $sub_type_entrypoint == "entry_only"))
+												<a href='{{ url("/patients/visits/{$row->patient->id}&{$row->id}") }}'
+												@if($row->closed == true && ($sub_type_entrypoint == "entry_only" || is_null($sub_type_entrypoint)) ))
 													class="btn btn-success disabled" title="تحديث ملف المريض"
 												@else
 													class="btn btn-success" title="تحديث ملف المريض"
@@ -184,7 +187,7 @@
 											 @endif
 											 @if(!is_null($sub_type_entrypoint) && ($sub_type_entrypoint == "exit_only" || $sub_type_entrypoint == "entry_and_exit"))
 											 <td style="text-align:center">
-												<a href='{{ url("patients/visit_exit/$row->id&$row->visit_id") }}'
+												<a href='{{ url("patients/visit_exit/{$row->patient->id}&{$row->id}") }}'
 												@if($row->closed == true && $sub_type_entrypoint == "exit_only")
 													class="btn btn-danger disabled" title="تسجيل خروج"
 												@else
@@ -199,7 +202,7 @@
 									  @endif
 									@else
 									<td style="text-align:center">
-										<a href='@if($role_name  == "Desk" ) {{ url("/patients/desk/$row->id") }} @else {{ url("/patients/reserve/$row->id") }} @endif' title="تسجيل كشف جديد" class="btn btn-success"><i class="fa fa-plus"></i></a></td>
+										<a href='@if($role_name  == "Desk" ) {{ url("/patients/desk/{$row->patient->id}") }} @else {{ url("/patients/reserve/{$row->patient->id}") }} @endif' title="تسجيل كشف جديد" class="btn btn-success"><i class="fa fa-plus"></i></a></td>
 									</td>
 									@if($role_name  == "Receiption" )
 									<td style="text-align:center">
@@ -210,7 +213,7 @@
 											<span class="caret"></span> <i class="fa fa fa-arrow-left"></i> </button>
 											 <ul class="dropdown-menu">
 												@foreach($desks as $desk)
-													<li><a href='{{ url("patients/convertvisit/$desk->id&$row->visit_id") }}'
+													<li><a href='{{ url("patients/convertvisit/$desk->id&{$row->id}") }}'
 														onclick="if(confirm('هل تريد تحويل المريض الي مكتب الاستقبال ؟')){return true;}else{return false;}"
 														>{{$desk->name}}</a></li>
 												@endforeach
@@ -219,7 +222,7 @@
 								    </td>
 									@endif
 									<td style="text-align:center">
-										<a href='{{ url("/patients/cancelvisit/$row->visit_id") }}'
+										<a href='{{ url("/patients/cancelvisit/$row->id") }}'
 										@if($row->closed == true )
 											 title="تم أنهاء الزيارة"
 										@elseif($row->created_at->format('Y-m-d') < date('Y-m-d',time()))

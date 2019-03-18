@@ -8,7 +8,7 @@ class MedicalOrderItem extends Model
 {
     //
 	use Logger;
-	protected $fillable=['visit_id','proc_id','doctor_id'];
+	protected $fillable=['visit_id','proc_id','proc_name','old_format','doctor_id'];
 	
 	public function visit(){
 	
